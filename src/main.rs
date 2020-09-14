@@ -1,175 +1,125 @@
-use regex::Regex;
+use regex::{Regex, RegexBuilder};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
+use v_eval::{Eval, Value};
 #[macro_use]
 extern crate lazy_static;
-#[derive(PartialEq, Debug)]
-enum VarType<'a> {
-    Number(f64),
-    Bool(bool),
-    String(&'a str),
-    Null,
-    Vector(Vec<VarType<'a>>),
-}
-struct Expression<'a> {
-    first: VarType<'a>,
-    second: VarType<'a>,
-    opperator: &'a str,
-}
 
-impl 
-
-impl Expression {
-    fn evaluate(&self) -> VarType {
-        match self.opperator {
-            "==" => VarType::Bool(self.first == self.second),
-            "!=" => VarType::Bool(self.first != self.second),
-            "!" => VarType::Bool(!self.first),
-            "<" => VarType::Bool(self.first < self.second),
-            ">" => VarType::Bool(self.first > self.second),
-            "+" => VarType::Number(self.first + self.second),
-            "-" => VarType::Number(self.first - self.second),
-            "*" => VarType::Number(self.first * self.second),
-            x => panic!("Unrecognized operator {}", x),
-        }
-    }
-}
-enum Thing {}
 #[derive(PartialEq, Debug)]
 enum Token<'a> {
-    VarDeclaration,
     If,
     Else,
     While,
-    OpAssignation,
-    OpEqual,
-    OpNotEqual,
-    OpNot,
-    OpLessThan,
-    OpGreaterThan,
-    OpAdd,
-    OpNeg,
-    OpMul,
+    Assignation(&'a str),
     OpenCBrackets,
     CloseCBrackets,
-    OpenBrackets,
-    CloseBrackets,
-    OpenParentheses,
-    CloseParentheses,
     Unknown(&'a str),
-    VarName(&'a str),
-    True,
-    False,
-    Comma,
-    Number(f64),
-    String(&'a str),
-    NewLine,
-    Print,
-}
-fn is_string(text: &str) -> bool {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r#""(\w*\s*\d*)*""#).unwrap();
-    }
-    RE.is_match(text)
 }
 
-fn is_a_variable(text: &str) -> bool {
+#[derive(PartialEq, Debug)]
+enum ParseNode<'a> {
+    If(&'a str, Vec<ParseNode<'a>>, Option<Vec<ParseNode<'a>>>),
+    While(&'a str, Vec<ParseNode<'a>>),
+    Assignation(&'a str, &'a str),
+    OpenCBrackets,
+    CloseCBrackets,
+    Unknown(&'a str),
+}
+
+fn is_assignation(text: &str) -> bool {
     lazy_static! {
-        static ref RE: Regex = Regex::new(r"\w+").unwrap();
+        static ref RE: Regex = Regex::new(r"\w+ *= *.+").unwrap();
     }
     RE.is_match(text)
 }
 
 fn tokenizer(source_code: &str) -> Vec<Token> {
-    let re = Regex::new(
-        r#"\n|var\s|if\s|else\s|while\s|==|!=|!|=|<|>|\+|-|\*|\{|\}|[|]|\(|\)|\strue\s|\sfalse\s|,|-?\d+.?\d*|"(\w*\s*\d*)*"|\w+"#,
-    )
-    .unwrap();
-    re.captures_iter(source_code)
-        .map(|cap| {
-            cap.get(0)
-                .unwrap()
-                .as_str()
-                .trim_matches(|c| c == ' ' || c == '\t')
-        })
+    let patterns = [
+        "if",
+        "else",
+        "while",
+        r"\{",
+        r"\}",
+        r"\w+ *= *.+", //Assignation
+        ".+",          //Everything else
+    ]
+    .join("|");
+
+    RegexBuilder::new(&patterns)
+        // .unicode(false)
+        .build()
+        .unwrap()
+        .captures_iter(source_code)
+        .map(|cap| cap.get(0).unwrap().as_str().trim())
         .map(|cap| match cap {
-            "var" => Token::VarDeclaration,
             "if" => Token::If,
             "else" => Token::Else,
             "while" => Token::While,
-            "=" => Token::OpAssignation,
-            "==" => Token::OpEqual,
-            "!=" => Token::OpNotEqual,
-            "!" => Token::OpNot,
-            "<" => Token::OpLessThan,
-            ">" => Token::OpGreaterThan,
-            "+" => Token::OpAdd,
-            "-" => Token::OpNeg,
-            "*" => Token::OpMul,
             "{" => Token::OpenCBrackets,
             "}" => Token::CloseCBrackets,
-            "[" => Token::OpenBrackets,
-            "]" => Token::CloseBrackets,
-            "(" => Token::OpenParentheses,
-            ")" => Token::CloseParentheses,
-            "true" => Token::True,
-            "false" => Token::False,
-            "print" => Token::Print,
-            "\n" => Token::NewLine,
-            x if x.parse::<f64>().is_ok() => Token::Number(x.parse::<f64>().unwrap()),
-            x if is_string(x) => Token::String(x),
-            x if is_a_variable(x) => Token::VarName(x),
+            a if is_assignation(a) => Token::Assignation(a),
             unknown => Token::Unknown(unknown),
         })
         .collect()
 }
 
-fn parse(instructions: Vec<Token>) -> Vec<Thing> {
+fn parse(instructions: Vec<Token>) -> Vec<ParseNode> {
     //let variables: HashMap<&str, VarType> = HashMap::new();
-    let instruction_iter = instructions.into_iter().peekable();
+    let mut ast = vec![];
+    let mut instruction_iter = instructions.into_iter().peekable();
     while instruction_iter.peek().is_some() {
         match instruction_iter
             .next()
             .expect(&format!("Something is very wrong at line {}", line!()))
         {
-            Token::VarDeclaration => {}
-            Token::If => {}
+            Token::If => match instruction_iter.peek().unwrap() {
+                Token::Unknown(a) => {
+                    match instruction_iter
+                        .skip(1)
+                        .next()
+                        .expect("Expected { after if expression")
+                    {
+                        //Wrong, need to check nested blocks
+                        Token::OpenCBrackets => {
+                            let mut body = vec![];
+                            while *instruction_iter.peek().expect("Expected }")
+                                != Token::CloseCBrackets
+                            {
+                                body.push(instruction_iter.next().unwrap());
+                            }
+                            ast.push(ParseNode::If(a, body, None));
+                        }
+                        
+                        Token::If => {}
+                        Token::Else => {}
+                        Token::While => {}
+                        Token::Assignation(_) => {}
+                        Token::CloseCBrackets => {}
+                        Token::Unknown(_) => {}
+                    }
+                }
+                _ => panic!("Expected expression after if"),
+            },
             Token::Else => {}
             Token::While => {}
-            Token::OpAssignation => {}
-            Token::OpEqual => {}
-            Token::OpNotEqual => {}
-            Token::OpNot => {}
-            Token::OpLessThan => {}
-            Token::OpGreaterThan => {}
-            Token::OpAdd => {}
-            Token::OpNeg => {}
-            Token::OpMul => {}
+            Token::Assignation(a) => {}
             Token::OpenCBrackets => {}
             Token::CloseCBrackets => {}
-            Token::OpenBrackets => {}
-            Token::CloseBrackets => {}
-            Token::OpenParentheses => {}
-            Token::CloseParentheses => {}
+
             Token::Unknown(s) => {
                 eprint!("What is \"{}\"?", s);
             }
-            Token::VarName(s) => {}
-            Token::True => {}
-            Token::False => {}
-            Token::Comma => {}
-            Token::Number(n) => {}
-            Token::String(s) => {}
-            Token::NewLine => {}
-            Token::Print => {}
         }
     }
+    unimplemented!()
 }
 
-fn execute(ast: Vec<Thing>) {}
-
 fn main() {
+    let mut e = Eval::default().insert("v", "1+3+5/3").unwrap();
+    dbg!(e.eval("v").unwrap());
+    //  e=e.insert("v", "[1,1]").unwrap();
+    //assert_eq!(e.eval("v").unwrap(), Value::Int(1));
     let filename = env::args().nth(1).expect("falta argumento");
     let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
     let instructions = tokenizer(&contents);
