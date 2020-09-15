@@ -135,10 +135,10 @@ fn parse_while<'a>(tokens: &'a [Token], i: &mut usize) -> Result<Vec<ParseNode<'
     match tokens[*i + 1] {
         Token::Expression(exp) => match tokens[*i + 2] {
             Token::OpenCBrackets => {
-                let block_end = find_matching_bracket(&tokens[*i + 1..])? + *i + 2;
-                let body = parse(&tokens[*i + 3..block_end - 1])?;
+                let block_end = find_matching_bracket(&tokens[*i + 1..])? + *i + 1;
+                let body = parse(&tokens[*i + 3..block_end])?;
                 ast.push(ParseNode::While(exp, body));
-                *i = block_end - 1;
+                *i = block_end;
             }
             _ => error = "Expected bracket after while expression",
         },
