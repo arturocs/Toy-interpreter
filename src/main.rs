@@ -179,76 +179,19 @@ fn parse<'a>(tokens: &'a [Token]) -> Vec<ParseNode<'a>> {
     ast
 }
 
-fn execute_if(expr: &str, if_block: &[ParseNode], else_block: &Option<Vec<ParseNode>>, env: &Eval) {
-    match env.eval(expr).unwrap() {
-        Value::Bool(true) => {
-            execute(if_block);
-        }
-        Value::Bool(false) => match else_block {
-            Some(e) => {
-                execute(e);
-            }
-            None => {}
-        },
-        _ => panic!("if statement only works with booleans"),
-    }
-}
-
-fn execute_while(expr: &str, block: &[ParseNode], env: &Eval) {
-    dbg!(env.eval("a").is_some());
-    while env.eval(expr).unwrap() == Value::Bool(true) {
-        execute(block)
-    }
-}
-
-fn execute_assignation(variable: &str, value: &str, env: Eval) -> Eval {
-    env.insert(variable, value).unwrap()
-}
-
-fn execute_print(expression: &Box<ParseNode>, env: &Eval) {
-    match expression.as_ref() {
-        ParseNode::Expression(expr) => {
-            // dbg!(env.eval("a").is_some());
-            println!("{:?}", env.eval(expr).unwrap());
-        }
-        _ => panic!("Only expressions can be printed"),
-    }
-}
-
-fn execute(ast: &[ParseNode]) {
-    let mut env = Eval::default();
-    let mut i: usize = 0;
-    while i < ast.len() {
-        // dbg!(&ast[i]);
-        match &ast[i] {
-            ParseNode::If(expr, if_block, else_block) => {
-                execute_if(expr, if_block, else_block, &env)
-            }
-            ParseNode::While(expr, block) => execute_while(expr, block, &env),
-            ParseNode::Assignation(variable, value) => {
-                env = execute_assignation(variable, value, env);
-            }
-            ParseNode::Expression(expr) => panic!("Unused expression {}", expr),
-            ParseNode::Print(expression) => execute_print(expression, &env),
-        }
-        i += 1;
-    }
-}
-
-fn execute_if2(
+fn execute_if(
     expr: &str,
     if_block: &[ParseNode],
     else_block: &Option<Vec<ParseNode>>,
     mut env: Eval,
 ) -> Eval {
-    //println!("Executing execute_if2");
     match env.eval(expr).unwrap() {
         Value::Bool(true) => {
-            env = execute2(if_block, env);
+            env = execute(if_block, env);
         }
         Value::Bool(false) => match else_block {
             Some(e) => {
-                env = execute2(e, env);
+                env = execute(e, env);
             }
             None => {}
         },
@@ -257,11 +200,9 @@ fn execute_if2(
     env
 }
 
-fn execute_while2(expr: &str, block: &[ParseNode], mut env: Eval) -> Eval {
-    dbg!(env.eval("a").is_some());
-   // println!("Executing execute_while2");
+fn execute_while(expr: &str, block: &[ParseNode], mut env: Eval) -> Eval {
     while env.eval(expr).unwrap() == Value::Bool(true) {
-        env = execute2(block, env)
+        env = execute(block, env)
     }
     env
 }
@@ -278,12 +219,12 @@ fn value_to_string(val: Value) -> String {
     }
 }
 
-fn execute_assignation2(variable: &str, value: &str, env: Eval) -> Eval {
+fn execute_assignation(variable: &str, value: &str, env: Eval) -> Eval {
     let b = value_to_string(env.eval(value).unwrap());
     env.insert(variable, &b).unwrap()
 }
 
-fn execute_print2(expression: &Box<ParseNode>, env: Eval) -> Eval {
+fn execute_print(expression: &Box<ParseNode>, env: Eval) -> Eval {
     match expression.as_ref() {
         ParseNode::Expression(expr) => {
             println!("{:?}", value_to_string(env.eval(expr).unwrap()));
@@ -293,20 +234,20 @@ fn execute_print2(expression: &Box<ParseNode>, env: Eval) -> Eval {
     env
 }
 
-fn execute2(ast: &[ParseNode], mut env: Eval) -> Eval {
+fn execute(ast: &[ParseNode], mut env: Eval) -> Eval {
     let mut i: usize = 0;
     while i < ast.len() {
         //dbg!(&ast[i]);
         match &ast[i] {
             ParseNode::If(expr, if_block, else_block) => {
-                env = execute_if2(expr, if_block, else_block, env)
+                env = execute_if(expr, if_block, else_block, env)
             }
-            ParseNode::While(expr, block) => env = execute_while2(expr, block, env),
+            ParseNode::While(expr, block) => env = execute_while(expr, block, env),
             ParseNode::Assignation(variable, value) => {
-                env = execute_assignation2(variable, value, env);
+                env = execute_assignation(variable, value, env);
             }
             ParseNode::Expression(expr) => panic!("Unused expression {}", expr),
-            ParseNode::Print(expression) => env = execute_print2(expression, env),
+            ParseNode::Print(expression) => env = execute_print(expression, env),
         }
         i += 1;
     }
@@ -321,5 +262,5 @@ fn main() {
     //let instructions = dbg!(instructions);
     let ast = parse(&instructions);
     // dbg!(&ast);
-    execute2(&ast, env);
+    execute(&ast, env);
 }
