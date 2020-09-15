@@ -28,7 +28,7 @@ enum ParseNode<'a> {
 
 fn is_assignation(text: &str) -> bool {
     lazy_static! {
-        static ref RE: Regex = Regex::new(r"\w+ += +.+").unwrap();
+        static ref RE: Regex = Regex::new(r".+ += +.+").unwrap();
     }
     RE.is_match(text)
 }
@@ -68,7 +68,7 @@ fn tokenizer(source_code: &str) -> Vec<Token> {
         r"\s*print\s+",
         r"\{",
         r"\}",
-        r"\w+ += +.+", //Assignation
+        r".+ += +.+",  //Assignation
         r"[^\{\}\n]+", //Everything else
     ]
     .join("|");
@@ -183,7 +183,7 @@ fn execute_if(
     mut env: Eval,
 ) -> Result<Eval, &'static str> {
     let mut error = "";
-    match env.eval(expr).ok_or("Error evaluating expression")? {
+    match env.eval(expr).ok_or("Error evaluating if expression")? {
         Value::Bool(true) => {
             env = execute(if_block, env)?;
         }
@@ -199,7 +199,7 @@ fn execute_if(
 }
 
 fn execute_while(expr: &str, block: &[ParseNode], mut env: Eval) -> Result<Eval, &'static str> {
-    while env.eval(expr).ok_or("Error evaluating expression")? == Value::Bool(true) {
+    while env.eval(expr).ok_or("Error evaluating while expression")? == Value::Bool(true) {
         env = execute(block, env)?
     }
     Ok(env)
@@ -212,7 +212,14 @@ fn value_to_string(val: Value) -> String {
         Value::Int(i) => i.to_string(),
         Value::Str(s) => s,
         Value::Range(r) => format!("{:?}", r),
-        Value::Vec(v) => format!("{:?}", v),
+        Value::Vec(v) => {
+            "[".to_string()
+                + &v.into_iter()
+                    .map(value_to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+                + "]"
+        }
         Value::None => "None".to_string(),
     }
 }
@@ -228,11 +235,19 @@ fn execute_print(expression: &Box<ParseNode>, env: Eval) -> Result<Eval, &'stati
     let mut error = "";
     match expression.as_ref() {
         ParseNode::Expression(expr) => {
-            println!("{}", value_to_string(env.eval(expr).unwrap()));
+            println!(
+                "{}",
+                value_to_string(env.eval(expr).ok_or("Error evaluating print expression")?)
+            );
         }
         _ => error = "Only expressions can be printed",
     }
     check_result(error == "", env, error)
+}
+
+fn execute_expression(expr: &str, env: Eval) -> Result<Eval, &'static str> {
+    env.eval(expr).ok_or("Error evaluating expression")?;
+    Ok(env)
 }
 
 fn execute(ast: &[ParseNode], mut env: Eval) -> Result<Eval, &'static str> {
@@ -247,7 +262,7 @@ fn execute(ast: &[ParseNode], mut env: Eval) -> Result<Eval, &'static str> {
             ParseNode::Assignation(variable, value) => {
                 env = execute_assignation(variable, value, env)?;
             }
-            ParseNode::Expression(expr) => panic!("Unused expression {}", expr),
+            ParseNode::Expression(expr) => env = execute_expression(expr, env)?,
             ParseNode::Print(expression) => env = execute_print(expression, env)?,
         }
         i += 1;
@@ -262,7 +277,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let instructions = tokenizer(&contents);
     //let instructions = dbg!(instructions);
     let ast = parse(&instructions)?;
-    // dbg!(&ast);
+    //dbg!(&ast);
     execute(&ast, env)?;
     Ok(())
 }
