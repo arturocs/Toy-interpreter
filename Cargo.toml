@@ -1,5 +1,5 @@
 [package]
-name = "protolang"
+name = "toy-interpreter"
 version = "0.1.0"
 authors = ["arturo"]
 edition = "2018"
