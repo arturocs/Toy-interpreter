@@ -89,17 +89,18 @@ fn tokenizer(source_code: &str) -> Vec<Token> {
         .collect()
 }
 
-fn parse_if<'a>(tokens: &'a [Token], i: &mut usize) -> Vec<ParseNode<'a>> {
+fn parse_if<'a>(tokens: &'a [Token], i: &mut usize) -> Result<Vec<ParseNode<'a>>, &'static str> {
     let mut ast = vec![];
+    let mut error = "";
     match tokens[*i + 1] {
         Token::Expression(exp) => match tokens[*i + 2] {
             Token::OpenCBrackets => {
-                let if_block_end = find_matching_bracket(&tokens[*i + 1..]).unwrap() + *i + 2;
-                let if_body = parse(&tokens[*i + 3..if_block_end - 1]);
+                let if_block_end = find_matching_bracket(&tokens[*i + 1..])? + *i + 2;
+                let if_body = parse(&tokens[*i + 3..if_block_end - 1])?;
                 if if_block_end < tokens.len() && tokens[if_block_end] == Token::Else {
                     let else_block_end =
-                        find_matching_bracket(&tokens[if_block_end..]).unwrap() + if_block_end;
-                    let else_body = parse(&tokens[if_block_end + 2..else_block_end]);
+                        find_matching_bracket(&tokens[if_block_end..])? + if_block_end;
+                    let else_body = parse(&tokens[if_block_end + 2..else_block_end])?;
                     ast.push(ParseNode::If(exp, if_body, Some(else_body)));
                     *i = else_block_end;
                 } else {
@@ -107,76 +108,80 @@ fn parse_if<'a>(tokens: &'a [Token], i: &mut usize) -> Vec<ParseNode<'a>> {
                     *i = if_block_end - 1;
                 }
             }
-            _ => panic!("Expected bracket after if expression"),
+            _ => error = "Expected bracket after if expression",
         },
-        _ => panic!("Expected expression after if"),
+        _ => error = "Expected expression after if",
     }
-    ast
+    if error == "" {
+        Ok(ast)
+    } else {
+        Err(error)
+    }
 }
 
-fn parse_print<'a>(tokens: &'a [Token], i: &mut usize) -> ParseNode<'a> {
+fn parse_print<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode<'a>, &'static str> {
     match tokens[*i + 1] {
         Token::Expression(e) => {
             *i += 1;
-            ParseNode::Print(Box::new(ParseNode::Expression(e)))
+            Ok(ParseNode::Print(Box::new(ParseNode::Expression(e))))
         }
-        _ => panic!(
-            "Expression to print not found i:{}, tokens: {:#?}",
-            i, tokens
-        ),
+        _ => Err("Expression to print not found"),
     }
 }
 
-fn parse_while<'a>(tokens: &'a [Token], i: &mut usize) -> Vec<ParseNode<'a>> {
+fn parse_while<'a>(tokens: &'a [Token], i: &mut usize) -> Result<Vec<ParseNode<'a>>, &'static str> {
     let mut ast = vec![];
+    let mut error = "";
     match tokens[*i + 1] {
         Token::Expression(exp) => match tokens[*i + 2] {
             Token::OpenCBrackets => {
-                let block_end = find_matching_bracket(&tokens[*i + 1..]).unwrap() + *i + 2;
-                let body = parse(&tokens[*i + 3..block_end - 1]);
+                let block_end = find_matching_bracket(&tokens[*i + 1..])? + *i + 2;
+                let body = parse(&tokens[*i + 3..block_end - 1])?;
                 ast.push(ParseNode::While(exp, body));
                 *i = block_end - 1;
             }
-            _ => panic!("Expected bracket after while expression"),
+            _ => error = "Expected bracket after while expression",
         },
-        _ => panic!("Expected expression after while"),
+        _ => error = "Expected expression after while",
     }
-    ast
+    if error == "" {
+        Ok(ast)
+    } else {
+        Err(error)
+    }
 }
 
-fn parse<'a>(tokens: &'a [Token]) -> Vec<ParseNode<'a>> {
+fn parse_assignation(assignation_str: &str) -> Result<ParseNode, &'static str> {
+    let mut assignation = assignation_str.split("=");
+    let err = "Error parsing asignation";
+    Ok(ParseNode::Assignation(
+        assignation.next().ok_or(err)?.trim(),
+        assignation.next().ok_or(err)?.trim(),
+    ))
+}
+
+fn parse<'a>(tokens: &'a [Token]) -> Result<Vec<ParseNode<'a>>, &'static str> {
     let mut ast = vec![];
+    let mut error = "";
     let mut i: usize = 0;
     while i < tokens.len() {
         match tokens[i] {
-            Token::If => ast.extend(parse_if(&tokens, &mut i)),
-            Token::Else => panic!(
-                "Unmatched else i:{}, ast:{:#?}, tokens: {:#?}",
-                i, ast, tokens
-            ),
-            Token::While => ast.extend(parse_while(&tokens, &mut i)),
-            Token::Assignation(a) => {
-                let mut assignation = a.split("=");
-                ast.push(ParseNode::Assignation(
-                    assignation.next().unwrap().trim(),
-                    assignation.next().unwrap().trim(),
-                ))
-            }
-            Token::OpenCBrackets => panic!(
-                "Unmatched {{ i:{}, ast: {:#?}, tokens: {:#?}",
-                i, ast, tokens
-            ),
-            Token::CloseCBrackets => panic!(
-                "Unmatched }} i:{}, ast: {:#?}, tokens: {:#?}",
-                i, ast, tokens
-            ),
-
+            Token::If => ast.extend(parse_if(&tokens, &mut i)?),
+            Token::Else => error = "Unmatched else",
+            Token::While => ast.extend(parse_while(&tokens, &mut i)?),
+            Token::Assignation(a) => ast.push(parse_assignation(a)?),
+            Token::OpenCBrackets => error = "Unmatched {",
+            Token::CloseCBrackets => error = "Unmatched }",
             Token::Expression(exp) => ast.push(ParseNode::Expression(exp)),
-            Token::Print => ast.push(parse_print(&tokens, &mut i)),
+            Token::Print => ast.push(parse_print(&tokens, &mut i)?),
         }
         i += 1;
     }
-    ast
+    if error == "" {
+        Ok(ast)
+    } else {
+        Err(error)
+    }
 }
 
 fn execute_if(
@@ -254,13 +259,14 @@ fn execute(ast: &[ParseNode], mut env: Eval) -> Eval {
     env
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let env = Eval::default();
     let filename = env::args().nth(1).expect("falta argumento");
     let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
     let instructions = tokenizer(&contents);
     //let instructions = dbg!(instructions);
-    let ast = parse(&instructions);
+    let ast = parse(&instructions)?;
     // dbg!(&ast);
     execute(&ast, env);
+    Ok(())
 }
