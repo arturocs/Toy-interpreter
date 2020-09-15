@@ -28,7 +28,7 @@ enum ParseNode<'a> {
 
 fn is_assignation(text: &str) -> bool {
     lazy_static! {
-        static ref RE: Regex = Regex::new(r"[^\{\}\n=]+\s*=\s*[^\{\}\n=]").unwrap();
+        static ref RE: Regex = Regex::new(r"[^\{\}\n=]+\s*=\s*[^\{\}\n=]+").unwrap();
     }
     RE.is_match(text)
 }
@@ -68,8 +68,8 @@ fn tokenizer(source_code: &str) -> Vec<Token> {
         r"\s*print\s+",
         r"\{",
         r"\}",
-        r"[^\{\}\n=]+\s*=\s*[^\{\}\n=]+",  //Assignation
-        r"[^\{\}\n]+", //Everything else
+        r"[^\{\}\n=]+\s*=\s*[^\{\}\n=]+", //Assignation
+        r"[^\{\}\n]+",                    //Everything else
     ]
     .join("|");
 
@@ -278,7 +278,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let filename = env::args().nth(1).ok_or("Missing argument")?;
     let contents = fs::read_to_string(filename)?;
     let instructions = tokenizer(&contents);
-    let instructions = dbg!(instructions);
+    //let instructions = dbg!(instructions);
     let ast = parse(&instructions)?;
     //dbg!(&ast);
     execute(&ast, env)?;
