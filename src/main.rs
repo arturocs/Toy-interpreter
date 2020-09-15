@@ -227,7 +227,7 @@ fn execute_assignation(variable: &str, value: &str, env: Eval) -> Eval {
 fn execute_print(expression: &Box<ParseNode>, env: Eval) -> Eval {
     match expression.as_ref() {
         ParseNode::Expression(expr) => {
-            println!("{:?}", value_to_string(env.eval(expr).unwrap()));
+            println!("{}", value_to_string(env.eval(expr).unwrap()));
         }
         _ => panic!("Only expressions can be printed"),
     }
