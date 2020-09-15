@@ -1,5 +1,6 @@
 use regex::{Regex, RegexBuilder};
-use std::{env, fmt, fs, str::FromStr};
+use std::ops::{Add, Div, Mul, Rem, Sub};
+use std::{cmp::Ordering, env, fmt, fs, str::FromStr};
 use v_eval::{Eval, Value};
 #[macro_use]
 extern crate lazy_static;
@@ -23,6 +24,69 @@ enum Val {
     Str(String),
     Vec(Vec<Val>),
     Null,
+}
+
+impl Add for Val {
+    type Output = Self;
+    fn add(self, other: Self) -> Self {
+        match (self, other) {
+            (Val::Number(a), Val::Number(b)) => Val::Number(a + b),
+            (Val::Str(a), Val::Str(b)) => Val::Str(a + &b),
+            (Val::Vec(mut a), Val::Vec(b)) => {
+                a.extend(b);
+                Val::Vec(a)
+            }
+            _ => Val::Null,
+        }
+    }
+}
+
+impl Sub for Val {
+    type Output = Self;
+    fn sub(self, other: Self) -> Self {
+        match (self, other) {
+            (Val::Number(a), Val::Number(b)) => Val::Number(a - b),
+            _ => Val::Null,
+        }
+    }
+}
+
+impl Mul for Val {
+    type Output = Self;
+    fn mul(self, other: Self) -> Self {
+        match (self, other) {
+            (Val::Number(a), Val::Number(b)) => Val::Number(a * b),
+            _ => Val::Null,
+        }
+    }
+}
+
+impl Div for Val {
+    type Output = Self;
+    fn div(self, other: Self) -> Self {
+        match (self, other) {
+            (Val::Number(a), Val::Number(b)) => Val::Number(a / b),
+            _ => Val::Null,
+        }
+    }
+}
+impl Rem for Val {
+    type Output = Self;
+    fn rem(self, other: Self) -> Self {
+        match (self, other) {
+            (Val::Number(a), Val::Number(b)) => Val::Number(a % b),
+            _ => Val::Null,
+        }
+    }
+}
+
+impl PartialOrd for Val {
+    fn partial_cmp(&self, other: &Val) -> Option<Ordering> {
+        match (self, other) {
+            (Val::Number(a), Val::Number(b)) => a.partial_cmp(b),
+            _ => None,
+        }
+    }
 }
 
 impl FromStr for Val {
