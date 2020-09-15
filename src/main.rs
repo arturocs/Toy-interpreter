@@ -33,6 +33,14 @@ fn is_assignation(text: &str) -> bool {
     RE.is_match(text)
 }
 
+fn check_result<T>(condition: bool, result: T, error: &'static str) -> Result<T, &'static str> {
+    if condition {
+        Ok(result)
+    } else {
+        Err(error)
+    }
+}
+
 fn find_matching_bracket(tokens: &[Token]) -> Result<usize, &'static str> {
     let mut nested_brackets = -1;
     let mut index = 0;
@@ -49,11 +57,7 @@ fn find_matching_bracket(tokens: &[Token]) -> Result<usize, &'static str> {
             _ => {}
         }
     }
-    if index > 0 {
-        Ok(index)
-    } else {
-        Err("Unable to find matching bracket")
-    }
+    check_result(index > 0, index, "Unable to find matching bracket")
 }
 
 fn tokenizer(source_code: &str) -> Vec<Token> {
@@ -112,11 +116,7 @@ fn parse_if<'a>(tokens: &'a [Token], i: &mut usize) -> Result<Vec<ParseNode<'a>>
         },
         _ => error = "Expected expression after if",
     }
-    if error == "" {
-        Ok(ast)
-    } else {
-        Err(error)
-    }
+    check_result(error == "", ast, error)
 }
 
 fn parse_print<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode<'a>, &'static str> {
@@ -144,11 +144,7 @@ fn parse_while<'a>(tokens: &'a [Token], i: &mut usize) -> Result<Vec<ParseNode<'
         },
         _ => error = "Expected expression after while",
     }
-    if error == "" {
-        Ok(ast)
-    } else {
-        Err(error)
-    }
+    check_result(error == "", ast, error)
 }
 
 fn parse_assignation(assignation_str: &str) -> Result<ParseNode, &'static str> {
@@ -177,11 +173,7 @@ fn parse<'a>(tokens: &'a [Token]) -> Result<Vec<ParseNode<'a>>, &'static str> {
         }
         i += 1;
     }
-    if error == "" {
-        Ok(ast)
-    } else {
-        Err(error)
-    }
+    check_result(error == "", ast, error)
 }
 
 fn execute_if(
