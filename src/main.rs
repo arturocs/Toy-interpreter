@@ -28,7 +28,7 @@ enum ParseNode<'a> {
 
 fn is_assignation(text: &str) -> bool {
     lazy_static! {
-        static ref RE: Regex = Regex::new(r".+ += +.+").unwrap();
+        static ref RE: Regex = Regex::new(r"[^\{\}\n=]+\s*=\s*[^\{\}\n=]").unwrap();
     }
     RE.is_match(text)
 }
@@ -68,7 +68,7 @@ fn tokenizer(source_code: &str) -> Vec<Token> {
         r"\s*print\s+",
         r"\{",
         r"\}",
-        r".+ += +.+",  //Assignation
+        r"[^\{\}\n=]+\s*=\s*[^\{\}\n=]+",  //Assignation
         r"[^\{\}\n]+", //Everything else
     ]
     .join("|");
@@ -96,11 +96,12 @@ fn tokenizer(source_code: &str) -> Vec<Token> {
 fn parse_if<'a>(tokens: &'a [Token], i: &mut usize) -> Result<Vec<ParseNode<'a>>, &'static str> {
     let mut ast = vec![];
     let mut error = "";
-    match tokens[*i + 1] {
-        Token::Expression(exp) => match tokens[*i + 2] {
+    *i += 1;
+    match tokens[*i] {
+        Token::Expression(exp) => match tokens[*i + 1] {
             Token::OpenCBrackets => {
-                let if_block_end = find_matching_bracket(&tokens[*i + 1..])? + *i + 2;
-                let if_body = parse(&tokens[*i + 3..if_block_end - 1])?;
+                let if_block_end = find_matching_bracket(&tokens[*i..])? + *i + 1;
+                let if_body = parse(&tokens[*i + 2..if_block_end - 1])?;
                 if if_block_end < tokens.len() && tokens[if_block_end] == Token::Else {
                     let else_block_end =
                         find_matching_bracket(&tokens[if_block_end..])? + if_block_end;
@@ -120,11 +121,9 @@ fn parse_if<'a>(tokens: &'a [Token], i: &mut usize) -> Result<Vec<ParseNode<'a>>
 }
 
 fn parse_print<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode<'a>, &'static str> {
-    match tokens[*i + 1] {
-        Token::Expression(e) => {
-            *i += 1;
-            Ok(ParseNode::Print(Box::new(ParseNode::Expression(e))))
-        }
+    *i += 1;
+    match tokens[*i] {
+        Token::Expression(e) => Ok(ParseNode::Print(Box::new(ParseNode::Expression(e)))),
         _ => Err("Expression to print not found"),
     }
 }
@@ -132,11 +131,12 @@ fn parse_print<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode<'a>, 
 fn parse_while<'a>(tokens: &'a [Token], i: &mut usize) -> Result<Vec<ParseNode<'a>>, &'static str> {
     let mut ast = vec![];
     let mut error = "";
-    match tokens[*i + 1] {
-        Token::Expression(exp) => match tokens[*i + 2] {
+    *i += 1;
+    match tokens[*i] {
+        Token::Expression(exp) => match tokens[*i + 1] {
             Token::OpenCBrackets => {
-                let block_end = find_matching_bracket(&tokens[*i + 1..])? + *i + 1;
-                let body = parse(&tokens[*i + 3..block_end])?;
+                let block_end = find_matching_bracket(&tokens[*i..])? + *i;
+                let body = parse(&tokens[*i + 2..block_end])?;
                 ast.push(ParseNode::While(exp, body));
                 *i = block_end;
             }
@@ -278,7 +278,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let filename = env::args().nth(1).ok_or("Missing argument")?;
     let contents = fs::read_to_string(filename)?;
     let instructions = tokenizer(&contents);
-    //let instructions = dbg!(instructions);
+    let instructions = dbg!(instructions);
     let ast = parse(&instructions)?;
     //dbg!(&ast);
     execute(&ast, env)?;
