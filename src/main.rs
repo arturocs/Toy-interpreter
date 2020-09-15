@@ -181,27 +181,28 @@ fn execute_if(
     if_block: &[ParseNode],
     else_block: &Option<Vec<ParseNode>>,
     mut env: Eval,
-) -> Eval {
-    match env.eval(expr).unwrap() {
+) -> Result<Eval, &'static str> {
+    let mut error = "";
+    match env.eval(expr).ok_or("Error evaluating expression")? {
         Value::Bool(true) => {
-            env = execute(if_block, env);
+            env = execute(if_block, env)?;
         }
         Value::Bool(false) => match else_block {
             Some(e) => {
-                env = execute(e, env);
+                env = execute(e, env)?;
             }
             None => {}
         },
-        _ => panic!("if statement only works with booleans"),
+        _ => error = "if statement only works with booleans",
     }
-    env
+    check_result(error == "", env, error)
 }
 
-fn execute_while(expr: &str, block: &[ParseNode], mut env: Eval) -> Eval {
-    while env.eval(expr).unwrap() == Value::Bool(true) {
-        env = execute(block, env)
+fn execute_while(expr: &str, block: &[ParseNode], mut env: Eval) -> Result<Eval, &'static str> {
+    while env.eval(expr).ok_or("Error evaluating expression")? == Value::Bool(true) {
+        env = execute(block, env)?
     }
-    env
+    Ok(env)
 }
 
 fn value_to_string(val: Value) -> String {
@@ -216,49 +217,52 @@ fn value_to_string(val: Value) -> String {
     }
 }
 
-fn execute_assignation(variable: &str, value: &str, env: Eval) -> Eval {
-    let b = value_to_string(env.eval(value).unwrap());
-    env.insert(variable, &b).unwrap()
+fn execute_assignation(variable: &str, value: &str, env: Eval) -> Result<Eval, &'static str> {
+    let b = value_to_string(env.eval(value).ok_or("Error evaluating expression")?);
+    Ok(env
+        .insert(variable, &b)
+        .map_err(|_| "Error assigning variable")?)
 }
 
-fn execute_print(expression: &Box<ParseNode>, env: Eval) -> Eval {
+fn execute_print(expression: &Box<ParseNode>, env: Eval) -> Result<Eval, &'static str> {
+    let mut error = "";
     match expression.as_ref() {
         ParseNode::Expression(expr) => {
             println!("{}", value_to_string(env.eval(expr).unwrap()));
         }
-        _ => panic!("Only expressions can be printed"),
+        _ => error = "Only expressions can be printed",
     }
-    env
+    check_result(error == "", env, error)
 }
 
-fn execute(ast: &[ParseNode], mut env: Eval) -> Eval {
+fn execute(ast: &[ParseNode], mut env: Eval) -> Result<Eval, &'static str> {
     let mut i: usize = 0;
     while i < ast.len() {
         //dbg!(&ast[i]);
         match &ast[i] {
             ParseNode::If(expr, if_block, else_block) => {
-                env = execute_if(expr, if_block, else_block, env)
+                env = execute_if(expr, if_block, else_block, env)?
             }
-            ParseNode::While(expr, block) => env = execute_while(expr, block, env),
+            ParseNode::While(expr, block) => env = execute_while(expr, block, env)?,
             ParseNode::Assignation(variable, value) => {
-                env = execute_assignation(variable, value, env);
+                env = execute_assignation(variable, value, env)?;
             }
             ParseNode::Expression(expr) => panic!("Unused expression {}", expr),
-            ParseNode::Print(expression) => env = execute_print(expression, env),
+            ParseNode::Print(expression) => env = execute_print(expression, env)?,
         }
         i += 1;
     }
-    env
+    Ok(env)
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let env = Eval::default();
-    let filename = env::args().nth(1).expect("falta argumento");
-    let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
+    let filename = env::args().nth(1).ok_or("Missing argument")?;
+    let contents = fs::read_to_string(filename)?;
     let instructions = tokenizer(&contents);
     //let instructions = dbg!(instructions);
     let ast = parse(&instructions)?;
     // dbg!(&ast);
-    execute(&ast, env);
+    execute(&ast, env)?;
     Ok(())
 }
