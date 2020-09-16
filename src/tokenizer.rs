@@ -12,14 +12,20 @@ pub(crate) enum Token<'a> {
     Print,
 }
 
+fn is_assignation(text: &str) -> bool {
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r"[^\{\}\n=]+\s*=\s*[^\{\}\n=]+").unwrap();
+    }
+    RE.is_match(text)
+}
+
 pub(crate) fn tokenize(source_code: &str) -> Vec<Token> {
     let patterns = [
-        r"\s*if\s+",
-        r"\s*else\s+",
-        r"\s*while\s+",
-        r"\s*print\s+",
-        r"\{",
-        r"\}",
+        r"\s*if\s+",                      //if
+        r"\s*else\s+",                    //else
+        r"\s*while\s+",                   //while
+        r"\s*print\s+",                   //print
+        r"\{|\}",                         //Curly brackets
         r"[^\{\}\n=]+\s*=\s*[^\{\}\n=]+", //Assignation
         r"[^\{\}\n]+",                    //Everything else
     ]
@@ -44,10 +50,77 @@ pub(crate) fn tokenize(source_code: &str) -> Vec<Token> {
         })
         .collect()
 }
-
-fn is_assignation(text: &str) -> bool {
+#[derive(PartialEq, Debug)]
+enum ExprToken<'a> {
+    VarName(&'a str),
+    Number(&'a str),
+    String(&'a str),
+    Bool(bool),
+    //FnCallStart(&'a str),
+    //VecAccessStart(&'a str),
+    OpenSBrackets,
+    CloseSBrackets,
+    OpenParentheses,
+    CloseParentheses,
+    Mul,
+    Div,
+    Rem,
+    Add,
+    Sub,
+    Eq,
+    NotEq,
+    And,
+    Or,
+    Not,
+    Comma,
+}
+fn tokenize_expression(expr: &str) -> Result<Vec<ExprToken>, &'static str> {
     lazy_static! {
-        static ref RE: Regex = Regex::new(r"[^\{\}\n=]+\s*=\s*[^\{\}\n=]+").unwrap();
+        static ref patterns : String = [
+            r"\d+\.?\d*",             //Number
+            r#"".*""#,                //String
+            r"\s*true\s+|\s*true\s+", //Bool
+            //r"[^\{\}\n=]\(",        //Starting part of a function call
+            //r"[^\{\}\n=]\[",        //Starting part of a vector access
+            r"\(|\)",          // Parentheses
+            r"\[|\]",          //Square brackets
+            r"\*",             // Multiplication operator
+            r"\/",             // Division operator
+            r"\%",             //Remainder operator
+            r"\+",             //Addition operator
+            r"\-",             //Substaction operator
+            r"==",             //Equality operator
+            r"!=",             //Not equal operator
+            r"&&",             //Logical and operator
+            r"||",             //Logical or operator
+            r"\,",             //Comma operator
+            r"[^\{\}\n=\(\)]", //Variable
+        ]
+        .join("|");
+        static ref EXPR_REGEX: Regex = Regex::new(&patterns).unwrap();
+        static ref VAR_REGEX: Regex = Regex::new(r"[^\{\}\n=\(\)]").unwrap();
     }
-    RE.is_match(text)
+    EXPR_REGEX
+        .captures_iter(expr)
+        .map(|cap| cap.get(0).unwrap().as_str().trim())
+        .filter(|s| s != &"")
+        .map(|m| match m {
+            "true" => Ok(ExprToken::Bool(true)),
+            "false" => Ok(ExprToken::Bool(false)),
+            "(" => Ok(ExprToken::OpenParentheses),
+            ")" => Ok(ExprToken::CloseParentheses),
+            "[" => Ok(ExprToken::OpenSBrackets),
+            "]" => Ok(ExprToken::CloseSBrackets),
+            "*" => Ok(ExprToken::Mul),
+            "+" => Ok(ExprToken::Add),
+            "-" => Ok(ExprToken::Sub),
+            "==" => Ok(ExprToken::Eq),
+            "!=" => Ok(ExprToken::NotEq),
+            "&&" => Ok(ExprToken::And),
+            "||" => Ok(ExprToken::Or),
+            "," => Ok(ExprToken::Comma),
+            var if VAR_REGEX.is_match(var) => Ok(ExprToken::VarName(var)),
+            _ => Err("Unable to match expression"),
+        })
+        .collect()
 }
