@@ -13,7 +13,7 @@ pub(crate) enum Token<'a> {
     Print,
 }
 
-pub(crate) fn tokenizer(source_code: &str) -> Vec<Token> {
+pub(crate) fn tokenize(source_code: &str) -> Vec<Token> {
     let patterns = [
         r"\s*if\s+",
         r"\s*else\s+",
