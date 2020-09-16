@@ -8,7 +8,11 @@ pub(crate) enum ParseNode<'a> {
     Print(Box<ParseNode<'a>>),
 }
 
-pub(crate) fn check_result<T>(condition: bool, result: T, error: &'static str) -> Result<T, &'static str> {
+pub(crate) fn check_result<T>(
+    condition: bool,
+    result: T,
+    error: &'static str,
+) -> Result<T, &'static str> {
     if condition {
         Ok(result)
     } else {
@@ -19,8 +23,8 @@ pub(crate) fn check_result<T>(condition: bool, result: T, error: &'static str) -
 fn find_matching_bracket(tokens: &[Token]) -> Result<usize, &'static str> {
     let mut nested_brackets = -1;
     let mut index = 0;
-    for i in 0..tokens.len() {
-        match tokens[i] {
+    for (i, token) in tokens.iter().enumerate() {
+        match token {
             Token::OpenCBrackets => nested_brackets += 1,
             Token::CloseCBrackets => {
                 nested_brackets -= 1;
@@ -90,7 +94,7 @@ fn parse_while<'a>(tokens: &'a [Token], i: &mut usize) -> Result<Vec<ParseNode<'
 }
 
 fn parse_assignation(assignation_str: &str) -> Result<ParseNode, &'static str> {
-    let mut assignation = assignation_str.split("=");
+    let mut assignation = assignation_str.split('=');
     let err = "Error parsing asignation";
     Ok(ParseNode::Assignation(
         assignation.next().ok_or(err)?.trim(),

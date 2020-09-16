@@ -1,13 +1,13 @@
 use std::{env, fs};
 use v_eval::Eval;
-mod tokenizer;
-mod val;
 mod parser;
 mod runtime;
+mod tokenizer;
+mod val;
 #[macro_use]
 extern crate lazy_static;
-use crate::tokenizer::*;
 use crate::parser::parse;
+use crate::tokenizer::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let env = Eval::default();

@@ -114,7 +114,7 @@ fn to_vec(s: &str) -> Result<Val, &'static str> {
     if s.starts_with('[') && s.ends_with(']') {
         Ok(Val::Vec(
             s.trim_matches(|c| c == '[' || c == ']')
-                .split(",")
+                .split(',')
                 .map(|v| Ok(v.parse::<Val>()?))
                 .collect::<Result<Vec<Val>, &'static str>>()?,
         ))
@@ -130,7 +130,7 @@ impl fmt::Display for Val {
             Val::Str(s) => s.clone(),
             Val::Vec(v) => {
                 "[".to_string()
-                    + &v.into_iter()
+                    + &v.iter()
                         .map(|v| v.to_string())
                         .collect::<Vec<_>>()
                         .join(", ")

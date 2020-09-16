@@ -1,5 +1,5 @@
+use crate::parser::{check_result, ParseNode};
 use v_eval::{Eval, Value};
-use crate::parser::{ParseNode, check_result};
 
 fn execute_if(
     expr: &str,
@@ -59,9 +59,9 @@ fn execute_assignation(variable: &str, value: &str, env: Eval) -> Result<Eval, &
         .map_err(|_| "Error assigning variable")?)
 }
 
-fn execute_print(expression: &Box<ParseNode>, env: Eval) -> Result<Eval, &'static str> {
+fn execute_print(expression: &ParseNode, env: Eval) -> Result<Eval, &'static str> {
     let mut error = "";
-    match expression.as_ref() {
+    match expression {
         ParseNode::Expression(expr) => {
             println!(
                 "{}",
