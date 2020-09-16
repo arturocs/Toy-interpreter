@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Index, Mul, Rem, Sub};
+use std::ops::{Add, Div, Index, Mul, Not, Rem, Sub};
 use std::{cmp::Ordering, fmt, str::FromStr};
 #[derive(PartialEq, Debug)]
 pub(crate) enum Val {
@@ -62,6 +62,17 @@ impl Rem for Val {
         }
     }
 }
+
+impl Not for Val {
+    type Output = Val;
+    fn not(self) -> Self::Output {
+        match self {
+            Val::Bool(a) => Val::Bool(!a),
+            _ => Val::Null,
+        }
+    }
+}
+
 
 impl PartialOrd for Val {
     fn partial_cmp(&self, other: &Val) -> Option<Ordering> {
