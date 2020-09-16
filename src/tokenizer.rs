@@ -1,5 +1,4 @@
 use regex::{Regex, RegexBuilder};
-//use lazy_static;
 
 #[derive(PartialEq, Debug)]
 pub(crate) enum Token<'a> {

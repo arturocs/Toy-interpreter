@@ -141,3 +141,18 @@ impl fmt::Display for Val {
         write!(fmt, "{}", val)
     }
 }
+
+impl Val {
+    fn and(&self, other: Val) -> Val {
+        match (self, other) {
+            (Val::Bool(a), Val::Bool(b)) => Val::Bool(*a && b),
+            _ => Val::Null,
+        }
+    }
+    fn or(&self, other: Val) -> Val {
+        match (self, other) {
+            (Val::Bool(a), Val::Bool(b)) => Val::Bool(*a || b),
+            _ => Val::Null,
+        }
+    }
+}
