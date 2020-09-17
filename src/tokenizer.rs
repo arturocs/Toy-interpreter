@@ -121,6 +121,7 @@ pub(crate) fn tokenize_expression(expr: &str) -> Result<Vec<ExprToken>, &'static
             "&&" => Ok(ExprToken::And),
             "||" => Ok(ExprToken::Or),
             "," => Ok(ExprToken::Comma),
+            num if num.parse::<f64>().is_ok() => Ok(ExprToken::Number(num.parse::<f64>().unwrap())),
             var if VAR_REGEX.is_match(var) => Ok(ExprToken::VarName(var)),
             _ => Err("Unable to match expression"),
         })
