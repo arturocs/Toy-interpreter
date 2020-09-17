@@ -39,9 +39,7 @@ fn find_matching_bracket(tokens: &[Token]) -> Result<usize, &'static str> {
     check_result(index > 0, index, "Unable to find matching bracket")
 }
 
-fn parse_if<'a>(tokens: &'a [Token], i: &mut usize) -> Result<Vec<ParseNode<'a>>, &'static str> {
-    let mut ast = vec![];
-    let mut error = "";
+fn parse_if<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode<'a>, &'static str> {
     *i += 1;
     match tokens[*i] {
         Token::Expression(exp) => match tokens[*i + 1] {
@@ -52,18 +50,17 @@ fn parse_if<'a>(tokens: &'a [Token], i: &mut usize) -> Result<Vec<ParseNode<'a>>
                     let else_block_end =
                         find_matching_bracket(&tokens[if_block_end..])? + if_block_end;
                     let else_body = parse(&tokens[if_block_end + 2..else_block_end])?;
-                    ast.push(ParseNode::If(exp, if_body, Some(else_body)));
                     *i = else_block_end;
+                    Ok(ParseNode::If(exp, if_body, Some(else_body)))
                 } else {
-                    ast.push(ParseNode::If(exp, if_body, None));
                     *i = if_block_end - 1;
+                    Ok(ParseNode::If(exp, if_body, None))
                 }
             }
-            _ => error = "Expected bracket after if expression",
+            _ => Err("Expected bracket after if expression"),
         },
-        _ => error = "Expected expression after if",
+        _ => Err("Expected expression after if"),
     }
-    check_result(error == "", ast, error)
 }
 
 fn parse_print<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode<'a>, &'static str> {
@@ -74,23 +71,20 @@ fn parse_print<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode<'a>, 
     }
 }
 
-fn parse_while<'a>(tokens: &'a [Token], i: &mut usize) -> Result<Vec<ParseNode<'a>>, &'static str> {
-    let mut ast = vec![];
-    let mut error = "";
+fn parse_while<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode<'a>, &'static str> {
     *i += 1;
     match tokens[*i] {
         Token::Expression(exp) => match tokens[*i + 1] {
             Token::OpenCBrackets => {
                 let block_end = find_matching_bracket(&tokens[*i..])? + *i;
                 let body = parse(&tokens[*i + 2..block_end])?;
-                ast.push(ParseNode::While(exp, body));
                 *i = block_end;
+                Ok(ParseNode::While(exp, body))
             }
-            _ => error = "Expected bracket after while expression",
+            _ => Err("Expected bracket after while expression"),
         },
-        _ => error = "Expected expression after while",
+        _ => Err("Expected expression after while"),
     }
-    check_result(error == "", ast, error)
 }
 
 fn parse_assignation(assignation_str: &str) -> Result<ParseNode, &'static str> {
@@ -108,9 +102,9 @@ pub(crate) fn parse<'a>(tokens: &'a [Token]) -> Result<Vec<ParseNode<'a>>, &'sta
     let mut i: usize = 0;
     while i < tokens.len() {
         match tokens[i] {
-            Token::If => ast.extend(parse_if(&tokens, &mut i)?),
+            Token::If => ast.push(parse_if(&tokens, &mut i)?),
             Token::Else => error = "Unmatched else",
-            Token::While => ast.extend(parse_while(&tokens, &mut i)?),
+            Token::While => ast.push(parse_while(&tokens, &mut i)?),
             Token::Assignation(a) => ast.push(parse_assignation(a)?),
             Token::OpenCBrackets => error = "Unmatched {",
             Token::CloseCBrackets => error = "Unmatched }",
