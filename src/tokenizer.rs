@@ -51,15 +51,16 @@ pub(crate) fn tokenize(source_code: &str) -> Vec<Token> {
         .collect()
 }
 #[derive(PartialEq, Debug)]
-enum ExprToken<'a> {
+pub(crate) enum ExprToken<'a> {
     VarName(&'a str),
-    Number(&'a str),
+    Number(f64),
     String(&'a str),
     Bool(bool),
     //FnCallStart(&'a str),
     //VecAccessStart(&'a str),
-    OpenSBrackets,
-    CloseSBrackets,
+    //Dot
+    //OpenSBrackets,
+    //CloseSBrackets,
     OpenParentheses,
     CloseParentheses,
     Mul,
@@ -74,7 +75,7 @@ enum ExprToken<'a> {
     Not,
     Comma,
 }
-fn tokenize_expression(expr: &str) -> Result<Vec<ExprToken>, &'static str> {
+pub(crate) fn tokenize_expression(expr: &str) -> Result<Vec<ExprToken>, &'static str> {
     lazy_static! {
         static ref patterns : String = [
             r"\d+\.?\d*",             //Number
@@ -82,18 +83,19 @@ fn tokenize_expression(expr: &str) -> Result<Vec<ExprToken>, &'static str> {
             r"\s*true\s+|\s*true\s+", //Bool
             //r"[^\{\}\n=]\(",        //Starting part of a function call
             //r"[^\{\}\n=]\[",        //Starting part of a vector access
+            //r"\."                   //Dot operator
             r"\(|\)",          // Parentheses
             r"\[|\]",          //Square brackets
             r"\*",             // Multiplication operator
-            r"\/",             // Division operator
-            r"\%",             //Remainder operator
+            r"/",             // Division operator
+            r"%",             //Remainder operator
             r"\+",             //Addition operator
             r"\-",             //Substaction operator
             r"==",             //Equality operator
             r"!=",             //Not equal operator
             r"&&",             //Logical and operator
-            r"||",             //Logical or operator
-            r"\,",             //Comma operator
+            r"\|\|",             //Logical or operator
+            r",",             //Comma operator
             r"[^\{\}\n=\(\)]", //Variable
         ]
         .join("|");
@@ -109,8 +111,8 @@ fn tokenize_expression(expr: &str) -> Result<Vec<ExprToken>, &'static str> {
             "false" => Ok(ExprToken::Bool(false)),
             "(" => Ok(ExprToken::OpenParentheses),
             ")" => Ok(ExprToken::CloseParentheses),
-            "[" => Ok(ExprToken::OpenSBrackets),
-            "]" => Ok(ExprToken::CloseSBrackets),
+            //"[" => Ok(ExprToken::OpenSBrackets),
+            //"]" => Ok(ExprToken::CloseSBrackets),
             "*" => Ok(ExprToken::Mul),
             "+" => Ok(ExprToken::Add),
             "-" => Ok(ExprToken::Sub),
