@@ -1,26 +1,20 @@
-use crate::parser::{check_result, ParseNode};
+use crate::parser::ParseNode;
 use v_eval::{Eval, Value};
 
 fn execute_if(
     expr: &str,
     if_block: &[ParseNode],
     else_block: &Option<Vec<ParseNode>>,
-    mut env: Eval,
+    env: Eval,
 ) -> Result<Eval, &'static str> {
-    let mut error = "";
     match env.eval(expr).ok_or("Error evaluating if expression")? {
-        Value::Bool(true) => {
-            env = execute(if_block, env)?;
-        }
+        Value::Bool(true) => execute(if_block, env),
         Value::Bool(false) => match else_block {
-            Some(e) => {
-                env = execute(e, env)?;
-            }
-            None => {}
+            Some(e) => execute(e, env),
+            None => Ok(env),
         },
-        _ => error = "if statement only works with booleans",
+        _ => Err("if statement only works with booleans"),
     }
-    check_result(error == "", env, error)
 }
 
 fn execute_while(expr: &str, block: &[ParseNode], mut env: Eval) -> Result<Eval, &'static str> {
@@ -60,17 +54,16 @@ fn execute_assignation(variable: &str, value: &str, env: Eval) -> Result<Eval, &
 }
 
 fn execute_print(expression: &ParseNode, env: Eval) -> Result<Eval, &'static str> {
-    let mut error = "";
     match expression {
         ParseNode::Expression(expr) => {
             println!(
                 "{}",
                 value_to_string(env.eval(expr).ok_or("Error evaluating print expression")?)
             );
+            Ok(env)
         }
-        _ => error = "Only expressions can be printed",
+        _ => Err("Only expressions can be printed"),
     }
-    check_result(error == "", env, error)
 }
 
 fn execute_expression(expr: &str, env: Eval) -> Result<Eval, &'static str> {
