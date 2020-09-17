@@ -15,6 +15,7 @@ impl Add for Val {
         match (self, other) {
             (Val::Number(a), Val::Number(b)) => Val::Number(a + b),
             (Val::Str(a), Val::Str(b)) => Val::Str(a + &b),
+            (Val::Str(a), b) => Val::Str(a + &b.to_string()),
             (Val::Vec(mut a), Val::Vec(b)) => {
                 a.extend(b);
                 Val::Vec(a)
@@ -72,7 +73,6 @@ impl Not for Val {
         }
     }
 }
-
 
 impl PartialOrd for Val {
     fn partial_cmp(&self, other: &Val) -> Option<Ordering> {
