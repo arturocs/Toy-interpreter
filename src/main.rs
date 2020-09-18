@@ -6,10 +6,14 @@ mod tokenizer;
 mod val;
 #[macro_use]
 extern crate lazy_static;
-use crate::parser::parse;
-use crate::tokenizer::tokenize;
+use crate::parser::*;
+use crate::tokenizer::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let t = tokenize_expression("(4*5*(6*7))")?;
+    dbg!(&t);
+    let a = parse_expr(&t)?;
+    dbg!(&a);
     let env = Eval::default();
     let filename = env::args().nth(1).ok_or("Missing argument")?;
     let contents = fs::read_to_string(filename)?;
@@ -17,6 +21,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     //let instructions = dbg!(instructions);
     let ast = parse(&instructions)?;
     //dbg!(&ast);
-    runtime::execute(&ast, env)?;
+    //runtime::execute(&ast, env)?;
     Ok(())
 }

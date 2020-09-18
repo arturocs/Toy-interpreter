@@ -75,6 +75,16 @@ pub(crate) enum ExprToken<'a> {
     Not,
     Comma,
 }
+
+impl<'a> ExprToken<'a> {
+    pub fn to_f64(&self) -> Result<f64, &'static str> {
+        match self {
+            ExprToken::Number(n) => Ok(*n),
+            _ => panic!("Not a number {:?}", self)//Err("Not a number"),
+        }
+    }
+}
+
 pub(crate) fn tokenize_expression(expr: &str) -> Result<Vec<ExprToken>, &'static str> {
     lazy_static! {
         static ref patterns : String = [
