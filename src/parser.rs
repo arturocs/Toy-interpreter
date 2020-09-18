@@ -1,4 +1,7 @@
 use crate::tokenizer::Token;
+
+type Error  = &'static str;
+
 #[derive(PartialEq, Debug, Clone)]
 pub(crate) enum ParseNode<'a> {
     If(&'a str, Vec<ParseNode<'a>>, Option<Vec<ParseNode<'a>>>), //If(Expression, If block, Else Block)
@@ -8,11 +11,7 @@ pub(crate) enum ParseNode<'a> {
     Print(Box<ParseNode<'a>>),
 }
 
-pub(crate) fn check_result<T>(
-    condition: bool,
-    result: T,
-    error: &'static str,
-) -> Result<T, &'static str> {
+pub(crate) fn check_result<T>(condition: bool, result: T, error: Error) -> Result<T, Error> {
     if condition {
         Ok(result)
     } else {
@@ -20,7 +19,7 @@ pub(crate) fn check_result<T>(
     }
 }
 
-fn find_matching_bracket(tokens: &[Token]) -> Result<usize, &'static str> {
+fn find_matching_bracket(tokens: &[Token]) -> Result<usize, Error> {
     let mut nested_brackets = -1;
     let mut index = 0;
     for (i, token) in tokens.iter().enumerate() {
@@ -39,7 +38,7 @@ fn find_matching_bracket(tokens: &[Token]) -> Result<usize, &'static str> {
     check_result(index > 0, index, "Unable to find matching bracket")
 }
 
-fn parse_if<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode<'a>, &'static str> {
+fn parse_if<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode<'a>, Error> {
     *i += 1;
     match tokens[*i] {
         Token::Expression(exp) => match tokens[*i + 1] {
@@ -63,7 +62,7 @@ fn parse_if<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode<'a>, &'s
     }
 }
 
-fn parse_print<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode<'a>, &'static str> {
+fn parse_print<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode<'a>, Error> {
     *i += 1;
     match tokens[*i] {
         Token::Expression(e) => Ok(ParseNode::Print(Box::new(ParseNode::Expression(e)))),
@@ -71,7 +70,7 @@ fn parse_print<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode<'a>, 
     }
 }
 
-fn parse_while<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode<'a>, &'static str> {
+fn parse_while<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode<'a>, Error> {
     *i += 1;
     match tokens[*i] {
         Token::Expression(exp) => match tokens[*i + 1] {
@@ -87,7 +86,7 @@ fn parse_while<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode<'a>, 
     }
 }
 
-fn parse_assignation(assignation_str: &str) -> Result<ParseNode, &'static str> {
+fn parse_assignation(assignation_str: &str) -> Result<ParseNode, Error> {
     let mut assignation = assignation_str.split('=');
     let err = "Error parsing asignation";
     Ok(ParseNode::Assignation(
@@ -96,7 +95,7 @@ fn parse_assignation(assignation_str: &str) -> Result<ParseNode, &'static str> {
     ))
 }
 
-pub(crate) fn parse<'a>(tokens: &'a [Token]) -> Result<Vec<ParseNode<'a>>, &'static str> {
+pub(crate) fn parse<'a>(tokens: &'a [Token]) -> Result<Vec<ParseNode<'a>>, Error> {
     let mut ast = vec![];
     let mut error = "";
     let mut i: usize = 0;
