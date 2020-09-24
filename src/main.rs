@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::{env, fs};
 use v_eval::Eval;
 mod parser;
