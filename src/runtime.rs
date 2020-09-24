@@ -24,30 +24,11 @@ fn execute_while(expr: &str, block: &[ParseNode], mut env: Eval) -> Result<Eval,
     Ok(env)
 }
 
-fn value_vec_to_string(vector: Vec<Value>) -> String {
-    "[".to_string()
-        + &vector
-            .into_iter()
-            .map(value_to_string)
-            .collect::<Vec<_>>()
-            .join(", ")
-        + "]"
-}
-
-fn value_to_string(val: Value) -> String {
-    match val {
-        Value::Bool(b) => b.to_string(),
-        Value::Float(f) => f.to_string(),
-        Value::Int(i) => i.to_string(),
-        Value::Str(s) => s,
-        Value::Range(r) => format!("{:?}", r),
-        Value::Vec(v) => value_vec_to_string(v),
-        Value::None => "None".to_string(),
-    }
-}
-
 fn execute_assignation(variable: &str, value: &str, env: Eval) -> Result<Eval, &'static str> {
-    let b = value_to_string(env.eval(value).ok_or("Error evaluating expression")?);
+    let b = env
+        .eval(value)
+        .ok_or("Error evaluating expression")?
+        .to_string();
     Ok(env
         .insert(variable, &b)
         .map_err(|_| "Error assigning variable")?)
@@ -58,7 +39,7 @@ fn execute_print(expression: &ParseNode, env: Eval) -> Result<Eval, &'static str
         ParseNode::Expression(expr) => {
             println!(
                 "{}",
-                value_to_string(env.eval(expr).ok_or("Error evaluating print expression")?)
+                env.eval(expr).ok_or("Error evaluating print expression")?
             );
             Ok(env)
         }
