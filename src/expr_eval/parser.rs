@@ -20,6 +20,10 @@ pub(crate) enum ParseNode<'a> {
     Sub(Box<[ParseNode<'a>; 2]>),
     Eq(Box<[ParseNode<'a>; 2]>),
     NotEq(Box<[ParseNode<'a>; 2]>),
+    Gt(Box<[ParseNode<'a>; 2]>),
+    Lt(Box<[ParseNode<'a>; 2]>),
+    Gtoe(Box<[ParseNode<'a>; 2]>),
+    Ltoe(Box<[ParseNode<'a>; 2]>),
     And(Box<[ParseNode<'a>; 2]>),
     Or(Box<[ParseNode<'a>; 2]>),
     Not(Box<ParseNode<'a>>),
@@ -229,6 +233,10 @@ pub(crate) fn parse<'a>(i: &mut usize, tokens: &'a [Token]) -> Result<ParseNode<
         Some(Token::Or) => todo!("Or"),
         Some(Token::Not) => todo!("Not"),
         Some(Token::Comma) => todo!("Comma"),
-        None => Ok(ParseNode::VarName("Bug")),
+        Some(Token::Ltoe) => todo!("Ltoe"),
+        Some(Token::Gtoe) => todo!("Gtoe"),
+        Some(Token::Lt) => todo!("Lt"),
+        Some(Token::Gt) => todo!("Gt"),
+        None => panic!("No token found"),
     }
 }
