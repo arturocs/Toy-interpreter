@@ -8,27 +8,32 @@ type Error = &'static str;
 
 pub(crate) fn evaluate<'a>(node: &ParseNode<'a>) -> Result<Val, Error> {
     match node {
-        ParseNode::VarName(_) => todo!(),
+        ParseNode::VarName(_) => todo!("Variables not implemented"),
         ParseNode::Number(n) => Ok(n.clone()),
-        ParseNode::String(_) => todo!(),
+        ParseNode::String(s) => Ok(s.clone()),
         ParseNode::Bool(b) => Ok(b.clone()),
-        ParseNode::Neg(_) => todo!(),
-        ParseNode::Mul(m) => evaluate(&m[0])?.mul(evaluate(&m[1])?),
-        ParseNode::Div(d) => evaluate(&d[0])?.div(evaluate(&d[1])?),
-        ParseNode::Rem(r) => evaluate(&r[0])?.rem(evaluate(&r[1])?),
-        ParseNode::Add(a) => evaluate(&a[0])?.add(evaluate(&a[1])?),
-        ParseNode::Sub(_) => todo!(),
-        ParseNode::Eq(_) => todo!(),
-        ParseNode::NotEq(_) => todo!(),
-        ParseNode::And(_) => todo!(),
-        ParseNode::Or(_) => todo!(),
-        ParseNode::Not(_) => todo!(),
+        ParseNode::Neg(n) => Ok(evaluate(&n)?.minus()?),
+        ParseNode::Mul(s) => evaluate(&s[0])?.mul(evaluate(&s[1])?),
+        ParseNode::Div(s) => evaluate(&s[0])?.div(evaluate(&s[1])?),
+        ParseNode::Rem(s) => evaluate(&s[0])?.rem(evaluate(&s[1])?),
+        ParseNode::Add(s) => evaluate(&s[0])?.add(evaluate(&s[1])?),
+        ParseNode::Sub(s) => evaluate(&s[0])?.sub(evaluate(&s[1])?),
+        ParseNode::Eq(s) => Ok(Val::Bool(evaluate(&s[0])?.eq(&evaluate(&s[1])?))),
+        ParseNode::NotEq(s) => Ok(Val::Bool(evaluate(&s[0])?.ne(&evaluate(&s[1])?))),
+        ParseNode::And(s) => evaluate(&s[0])?.and(evaluate(&s[1])?),
+        ParseNode::Or(s) => evaluate(&s[0])?.or(evaluate(&s[1])?),
+        ParseNode::Not(b) => Ok(evaluate(&b)?.not()?),
+        ParseNode::Gt(s) => Ok(Val::Bool(evaluate(&s[0])? > evaluate(&s[1])?)),
+        ParseNode::Lt(s) => Ok(Val::Bool(evaluate(&s[0])? < evaluate(&s[1])?)),
+        ParseNode::Gtoe(s) => Ok(Val::Bool(evaluate(&s[0])? >= evaluate(&s[1])?)),
+        ParseNode::Ltoe(s) => Ok(Val::Bool(evaluate(&s[0])? <= evaluate(&s[1])?)),
     }
 }
 #[test]
 fn two_x_3_plus_4_x_5() {
     let tokens = tokenize("2*3+4*5").unwrap();
     let ast = parse(&mut (tokens.len() - 1), &tokens).unwrap();
+    dbg!(&ast);
     let result = evaluate(&ast).unwrap();
     assert_eq!(Val::Number(26.0), result);
 }
