@@ -19,6 +19,10 @@ pub(crate) enum Token<'a> {
     Sub,
     Eq,
     NotEq,
+    Gt,
+    Lt,
+    Gtoe,
+    Ltoe,
     And,
     Or,
     Not,
@@ -57,6 +61,10 @@ pub(crate) fn tokenize(expr: &str) -> Result<Vec<Token>, &'static str> {
             r"\-",             //Subtraction operator
             r"==",             //Equality operator
             r"!=",             //Not equal operator
+            r"<=",             //Less than or equal to operator
+            r">=",             //Greater than or equal to operator
+            r"<",             //Less than operator
+            r">",             //Greater than operator
             r"&&",             //Logical and operator
             r"\|\|",             //Logical or operator
             r",",             //Comma operator
@@ -87,6 +95,10 @@ pub(crate) fn tokenize(expr: &str) -> Result<Vec<Token>, &'static str> {
             "!" => Ok(Token::Not),
             "/" => Ok(Token::Div),
             "%" => Ok(Token::Rem),
+            "<=" => Ok(Token::Ltoe),
+            ">=" => Ok(Token::Gtoe),
+            "<" => Ok(Token::Lt),
+            ">" => Ok(Token::Gt),
             _ => check_var_and_f64(capture),
         })
         .collect()
