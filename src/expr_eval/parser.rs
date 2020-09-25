@@ -109,15 +109,12 @@ fn parse_add<'a>(
             let next = &tokens[..start];
             let priority_result = parse(&mut (priority.len() - 1), priority);
             dbg!(&priority_result);
-
+            let without_op = &current[1..];
             let current_result = match dbg!(current.first()) {
-                Some(Token::Add) => {
-                    let without_add = &current[1..];
-                    Ok(ParseNode::Add(Box::new([
-                        priority_result?,
-                        parse(&mut (without_add.len() - 1), without_add)?,
-                    ])))
-                }
+                Some(Token::Add) => Ok(ParseNode::Add(Box::new([
+                    priority_result?,
+                    parse(&mut (without_op.len() - 1), without_op)?,
+                ]))),
                 None => priority_result,
                 a => todo!("{:?}", a),
             };
@@ -163,19 +160,35 @@ fn parse_add<'a>(
 }
 
 fn parse_number<'a>(i: &mut usize, tokens: &'a [Token]) -> Result<ParseNode<'a>, Error> {
-    let current_number = match tokens.get(*i) {
+    let token_to_node = |i| match tokens.get(i) {
         Some(Token::Number(n)) => ParseNode::Number(Val::Number(*n)),
         _ => panic!("Expected number"),
     };
+    let current_number = token_to_node(*i);
     dbg!(&current_number);
 
     match (*i).checked_sub(2) {
-        Some(mut i) => match tokens[i + 1] {
-            Token::Mul => Ok(ParseNode::Mul(join_nodes(i, tokens, current_number)?)),
-            Token::Div => Ok(ParseNode::Div(join_nodes(i, tokens, current_number)?)),
-            Token::Rem => Ok(ParseNode::Rem(join_nodes(i, tokens, current_number)?)),
-            Token::Add => parse_add(&mut i, tokens, current_number),
-            _ => todo!("{:?}", tokens[i + 1]),
+        Some(mut j) => match tokens[j + 1] {
+            Token::Mul => {
+                match find_prioritary_operation(&mut (j + 1), tokens) {
+                    Some((a, b)) => {
+                        match dbg!(&tokens[a + 1]) {
+                            Token::Add => Ok(ParseNode::Add(Box::new([
+                                parse(&mut j, &tokens[..=a + 1])?,
+                                parse(&mut j, &tokens[a..=b])?,
+                            ]))),
+                            _ => Ok(ParseNode::Mul(join_nodes(a, tokens, current_number)?))//panic!("only add {:?}",&tokens[a..=b]),
+                        }
+                        // parse(i, &tokens[a..=b])
+                    }
+                    None => panic!("bug"),
+                }
+                // todo!()
+            } //Ok(ParseNode::Mul(join_nodes(i, tokens, current_number)?)),
+            Token::Div => Ok(ParseNode::Div(join_nodes(j, tokens, current_number)?)),
+            Token::Rem => Ok(ParseNode::Rem(join_nodes(j, tokens, current_number)?)),
+            Token::Add => parse_add(&mut j, tokens, current_number),
+            _ => todo!("{:?}", tokens[j + 1]),
         },
         None => Ok(current_number),
     }
