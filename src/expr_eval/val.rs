@@ -126,6 +126,12 @@ impl Val {
             _ => Err("Not operator can only be applied to booleans"),
         }
     }
+    pub fn minus(self) -> Result<Self, Error> {
+        match self {
+            Val::Number(a) => Ok(Val::Number(-a)),
+            _ => Err("Unary minus can only be applied to numbers"),
+        }
+    }
 
     pub fn index(&self, i: usize) -> Result<&Self, Error> {
         match self {
