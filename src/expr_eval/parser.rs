@@ -139,10 +139,10 @@ pub(crate) fn process_tokens<'a>(tokens: &'a [Token]) -> Result<Vec<ProcessedTok
             Token::Or => processed_tokens.push(ProcessedToken::Or),
             Token::Not => processed_tokens.push(ProcessedToken::Not),
             Token::Comma => todo!("Commas"),
-            Token::FnCallStart(_) => todo!("Functions"),
-            Token::VecAccessStart(_) => todo!("Vectors"),
-            Token::OpenSBrackets => todo!("Vectors"),
-            Token::CloseSBrackets => todo!("Vectors"),
+            // Token::FnCallStart(_) => todo!("Functions"),
+            // Token::VecAccessStart(_) => todo!("Vectors"),
+            // Token::OpenSBrackets => todo!("Vectors"),
+            // Token::CloseSBrackets => todo!("Vectors"),
         }
         index += 1;
     }
