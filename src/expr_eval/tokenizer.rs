@@ -29,15 +29,17 @@ pub(crate) enum Token<'a> {
     Comma,
 }
 
-fn check_var_and_f64(capture: &str) -> Result<Token, &'static str> {
+fn check_var_f64_and_str(capture: &str) -> Result<Token, &'static str> {
     lazy_static! {
         static ref VAR_REGEX: Regex = Regex::new(r"[^\{\}\n=\(\)]").unwrap();
     }
     let is_f64 = capture.parse::<f64>();
     if is_f64.is_ok() {
         Ok(Token::Number(is_f64.unwrap()))
+    } else if capture.starts_with('"') && capture.ends_with('"') {
+        Ok(Token::String(capture.to_owned()))
     } else if VAR_REGEX.is_match(capture) {
-        Ok(Token::VarName(capture))
+        Ok(Token::VarName(capture.to_owned()))
     } else {
         Err("Unable to match expression")
     }
@@ -99,7 +101,7 @@ pub(crate) fn tokenize(expr: &str) -> Result<Vec<Token>, &'static str> {
             ">=" => Ok(Token::Gtoe),
             "<" => Ok(Token::Lt),
             ">" => Ok(Token::Gt),
-            _ => check_var_and_f64(capture),
+            _ => check_var_f64_and_str(capture),
         })
         .collect()
 }
