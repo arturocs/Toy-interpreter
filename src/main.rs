@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![feature(iterator_fold_self)]
 use std::{env, fs};
 use v_eval::Eval;
 mod expr_eval;
