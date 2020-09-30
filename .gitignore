@@ -10,6 +10,9 @@ Cargo.lock
 **/*.rs.bk
 
 flamegraph.svg
+flamegraph_old.svg
+flamegraph_hm.svg
+
 code
 code2
 code3
