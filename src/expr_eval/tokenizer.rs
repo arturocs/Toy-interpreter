@@ -1,9 +1,9 @@
 use regex::Regex;
 #[derive(PartialEq, Debug, Clone)]
-pub(crate) enum Token<'a> {
-    VarName(&'a str),
+pub(crate) enum Token {
+    VarName(String),
     Number(f64),
-    String(&'a str),
+    String(String),
     Bool(bool),
     //FnCallStart(&'a str),
     //VecAccessStart(&'a str),
