@@ -50,7 +50,7 @@ pub(crate) fn tokenize(expr: &str) -> Result<Vec<Token>, &'static str> {
         static ref PATTERNS : String = [
             r"\d+\.?\d*",             //Number
             r#"".*""#,                //String
-            r"\s*true\s+|\s*true\s+", //Bool
+            r"\s*true\s*|\s*true\s*", //Bool
             //r"[^\{\}\n=]\(",        //Starting part of a function call
             //r"[^\{\}\n=]\[",        //Starting part of a vector access
             //r"\."                   //Dot operator
