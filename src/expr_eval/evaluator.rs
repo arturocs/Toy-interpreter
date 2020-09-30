@@ -41,6 +41,39 @@ fn four_divided_by_2_plus_2() {
 }
 
 #[test]
+fn true_() {
+    let tokens = tokenize("true").unwrap();
+    //dbg!(&tokens);
+    let processed_tokens = process_tokens(&tokens).unwrap();
+    let ast = parse(&processed_tokens).unwrap();
+    //dbg!(&ast);
+    let env = Environment::new();
+    let result = env.execute(&ast).unwrap();
+    assert_eq!(Val::Bool(true), result);
+}
+
+#[test]
+fn four_equals_2() {
+    let tokens = tokenize("4==2").unwrap();
+    let processed_tokens = process_tokens(&tokens).unwrap();
+    let ast = parse(&processed_tokens).unwrap();
+    // dbg!(&ast);
+    let env = Environment::new();
+    let result = env.execute(&ast).unwrap();
+    assert_eq!(Val::Bool(4 == 2), result);
+}
+#[test]
+fn four_plus_1_gtoe_5_and_2_lt_3() {
+    let tokens = tokenize("4+1 >= 5 &&  2<3").unwrap();
+    let processed_tokens = process_tokens(&tokens).unwrap();
+    let ast = parse(&processed_tokens).unwrap();
+    // dbg!(&ast);
+    let env = Environment::new();
+    let result = env.execute(&ast).unwrap();
+    assert_eq!(Val::Bool(4 + 1 >= 5 && 2 < 3), result);
+}
+
+#[test]
 fn two_x_3_plus_4_x_5() {
     let tokens = tokenize("2*3+4*5").unwrap();
     let processed_tokens = process_tokens(&tokens).unwrap();
