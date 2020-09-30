@@ -32,40 +32,84 @@ pub(crate) fn evaluate<'a>(node: &ParseNode<'a>) -> Result<Val, Error> {
 #[test]
 fn two_x_3_plus_4_x_5() {
     let tokens = tokenize("2*3+4*5").unwrap();
-    let ast = parse(&mut (tokens.len() - 1), &tokens).unwrap();
-    dbg!(&ast);
+    let processed_tokens = process_tokens(&tokens).unwrap();
+    let ast = parse(&processed_tokens).unwrap();
+    //dbg!(&ast);
     let result = evaluate(&ast).unwrap();
-    assert_eq!(Val::Number(26.0), result);
+    assert_eq!(Val::Number(2.0 * 3.0 + 4.0 * 5.0), result);
+}
+
+#[test]
+fn negative_number() {
+    let tokens = tokenize("-2+1").unwrap();
+    let processed_tokens = process_tokens(&tokens).unwrap();
+    let ast = parse(&processed_tokens).unwrap();
+    //dbg!(&ast);
+    let result = evaluate(&ast).unwrap();
+    assert_eq!(Val::Number(-2.0 + 1.0), result);
+}
+
+#[test]
+fn subtract_nsubtractionumber() {
+    let tokens = tokenize("2-1").unwrap();
+    let processed_tokens = process_tokens(&tokens).unwrap();
+    let ast = parse(&processed_tokens).unwrap();
+    //dbg!(&ast);
+    let result = evaluate(&ast).unwrap();
+    assert_eq!(Val::Number(2.0 - 1.0), result);
 }
 
 #[test]
 fn two_x_3_plus_4_x_5_parentheses() {
     let tokens = tokenize("(2*3)+(4*5)").unwrap();
-    let ast = parse(&mut (tokens.len() - 1), &tokens).unwrap();
+    let processed_tokens = process_tokens(&tokens).unwrap();
+    let ast = parse(&processed_tokens).unwrap();
+    //dbg!(&ast);
     let result = evaluate(&ast).unwrap();
-    assert_eq!(Val::Number(26.0), result);
+    assert_eq!(Val::Number((2.0 * 3.0) + (4.0 * 5.0)), result);
 }
 
 #[test]
+#[allow(unused_parens)]
+fn lot_of_parentheses() {
+    let tokens = tokenize("((1+2)*3/(5*(3+1)))").unwrap();
+    let processed_tokens = process_tokens(&tokens).unwrap();
+    //dbg!(&processed_tokens);
+    let ast = parse(&processed_tokens).unwrap();
+    // dbg!(&ast);
+    let result = evaluate(&ast).unwrap();
+    assert_eq!(
+        Val::Number(((1.0 + 2.0) * 3.0 / (5.0 * (3.0 + 1.0)))),
+        result
+    );
+}
+#[test]
 fn zero_x_1_plus_2_x_3_x_4_plus_5_plus_6() {
     let tokens = tokenize("0*1+2*3*4+5+6").unwrap();
-    let ast = parse(&mut (tokens.len() - 1), &tokens).unwrap();
+    let processed_tokens = process_tokens(&tokens).unwrap();
+    let ast = parse(&processed_tokens).unwrap();
     let result = evaluate(&ast).unwrap();
-    assert_eq!(Val::Number(35.0), result);
+    assert_eq!(Val::Number(0.0 * 1.0 + 2.0 * 3.0 * 4.0 + 5.0 + 6.0), result);
 }
 
 #[test]
 fn three_plus_4_divided_by_5() {
     let tokens = tokenize("3+4/5").unwrap();
-    let ast = parse(&mut (tokens.len() - 1), &tokens).unwrap();
+    let processed_tokens = process_tokens(&tokens).unwrap();
+    //dbg!(&processed_tokens);
+    let ast = parse(&processed_tokens).unwrap();
+    //dbg!(&ast);
     let result = evaluate(&ast).unwrap();
-    assert_eq!(Val::Number(3.8), result);
+    assert_eq!(Val::Number(3.0 + 4.0 / 5.0), result);
 }
 
 #[test]
 fn threee_plus_4_divided_by_5_parentheses() {
     let tokens = tokenize("(3+4)/5").unwrap();
-    let ast = parse(&mut (tokens.len() - 1), &tokens).unwrap();
+    let processed_tokens = process_tokens(&tokens).unwrap();
+    dbg!(&processed_tokens);
+    let ast = parse(&processed_tokens).unwrap();
+    //dbg!(&ast);
     let result = evaluate(&ast).unwrap();
-    assert_eq!(Val::Number(1.4), result);
+    assert_eq!(Val::Number((3.0 + 4.0) / 5.0), result);
 }
