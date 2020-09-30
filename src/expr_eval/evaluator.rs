@@ -29,6 +29,17 @@ pub(crate) fn evaluate<'a>(node: &ParseNode<'a>) -> Result<Val, Error> {
         ParseNode::Ltoe(s) => Ok(Val::Bool(evaluate(&s[0])? <= evaluate(&s[1])?)),
     }
 }
+
+#[test]
+fn four_divided_by_2_plus_2() {
+    let tokens = tokenize("4/2+2").unwrap();
+    let processed_tokens = process_tokens(&tokens).unwrap();
+    let ast = parse(&processed_tokens).unwrap();
+    //dbg!(&ast);
+    let result = evaluate(&ast).unwrap();
+    assert_eq!(Val::Number(4.0 / 2.0 + 2.0), result);
+}
+
 #[test]
 fn two_x_3_plus_4_x_5() {
     let tokens = tokenize("2*3+4*5").unwrap();
