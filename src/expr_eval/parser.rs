@@ -54,22 +54,16 @@ pub(crate) enum ProcessedToken {
     Ltoe,
     And,
     Or,
-    Not,
+    Not(Option<Box<ProcessedToken>>),
     Comma,
-    TempNeg,
-    Neg(Box<ProcessedToken<'a>>),
+    Neg(Box<ProcessedToken>),
 }
 
 fn find_matching_parentheses<'a>(i: usize, tokens: &'a [Token]) -> Result<usize, Error> {
     let mut nested_parentheses = -1;
     let mut last_parentheses = 0;
     let mut found = false;
-
-    //dbg!(tokens);
-    //dbg!(i);
-
     for index in i + 1..tokens.len() {
-        //    dbg!(&tokens[index]);
         match tokens[index] {
             Token::CloseParentheses => {
                 nested_parentheses += 1;
@@ -84,8 +78,6 @@ fn find_matching_parentheses<'a>(i: usize, tokens: &'a [Token]) -> Result<usize,
             _ => {}
         }
     }
-
-    // dbg!(last_parentheses);
     if found {
         Ok(last_parentheses)
     } else {
@@ -93,11 +85,7 @@ fn find_matching_parentheses<'a>(i: usize, tokens: &'a [Token]) -> Result<usize,
     }
 }
 
-fn process_parentheses<'a>(
-    tokens: &'a [Token],
-    i: &mut usize,
-) -> Result<ProcessedToken<'a>, Error> {
-    //llamar a process tokens en el nuevo rango
+fn process_parentheses<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ProcessedToken, Error> {
     let parentheses_end = find_matching_parentheses(*i, tokens)?;
     // dbg!(parentheses_end);
     let parentheses_content = &tokens[*i + 1..parentheses_end];
@@ -107,16 +95,50 @@ fn process_parentheses<'a>(
     )?))
 }
 
-pub(crate) fn process_tokens<'a>(tokens: &'a [Token]) -> Result<Vec<ProcessedToken<'a>>, Error> {
+fn process_not_and_negatives<'a>(tokens: Vec<ProcessedToken>) -> Vec<ProcessedToken> {
+    let mut processed_tokens = Vec::with_capacity(tokens.len());
+    let mut i = 0;
+    while i < tokens.len() {
+        match &tokens[i] {
+            ProcessedToken::Sub => {
+                if i == 0 {
+                    processed_tokens.push(ProcessedToken::Neg(Box::new(tokens[i + 1].clone())));
+                    i += 1;
+                } else {
+                    match tokens[i - 1] {
+                        ProcessedToken::Number(_)
+                        | ProcessedToken::CloseParentheses
+                        | ProcessedToken::Neg(_)
+                        | ProcessedToken::VarName(_) => processed_tokens.push(ProcessedToken::Sub),
+                        _ => {
+                            processed_tokens
+                                .push(ProcessedToken::Neg(Box::new(tokens[i + 1].clone())));
+                            i += 1;
+                        }
+                    }
+                }
+            }
+            ProcessedToken::Not(_) => {
+                processed_tokens.push(ProcessedToken::Not(Some(Box::new(tokens[i + 1].clone()))));
+                i += 1;
+            }
+            a => processed_tokens.push(a.clone()),
+        }
+        i += 1;
+    }
+    processed_tokens
+}
+
+pub(crate) fn process_tokens<'a>(tokens: &'a [Token]) -> Result<Vec<ProcessedToken>, Error> {
     let mut processed_tokens = Vec::with_capacity(tokens.len());
     let mut index = 0;
     let mut error = "";
     while index < tokens.len() {
-        match tokens[index] {
-            Token::VarName(a) => processed_tokens.push(ProcessedToken::VarName(a)),
-            Token::Number(a) => processed_tokens.push(ProcessedToken::Number(a)),
-            Token::String(a) => processed_tokens.push(ProcessedToken::String(a)),
-            Token::Bool(a) => processed_tokens.push(ProcessedToken::Bool(a)),
+        match &tokens[index] {
+            Token::VarName(a) => processed_tokens.push(ProcessedToken::VarName(a.clone())),
+            Token::Number(a) => processed_tokens.push(ProcessedToken::Number(*a)),
+            Token::String(a) => processed_tokens.push(ProcessedToken::String(a.clone())),
+            Token::Bool(a) => processed_tokens.push(ProcessedToken::Bool(*a)),
             Token::OpenParentheses => {
                 processed_tokens.push(process_parentheses(tokens, &mut index)?)
             }
@@ -137,7 +159,7 @@ pub(crate) fn process_tokens<'a>(tokens: &'a [Token]) -> Result<Vec<ProcessedTok
             Token::Ltoe => processed_tokens.push(ProcessedToken::Ltoe),
             Token::And => processed_tokens.push(ProcessedToken::And),
             Token::Or => processed_tokens.push(ProcessedToken::Or),
-            Token::Not => processed_tokens.push(ProcessedToken::Not),
+            Token::Not => processed_tokens.push(ProcessedToken::Not(None)),
             Token::Comma => todo!("Commas"),
             // Token::FnCallStart(_) => todo!("Functions"),
             // Token::VecAccessStart(_) => todo!("Vectors"),
@@ -147,72 +169,130 @@ pub(crate) fn process_tokens<'a>(tokens: &'a [Token]) -> Result<Vec<ProcessedTok
         index += 1;
     }
     if error == "" {
-        Ok(processed_tokens)
+        Ok(process_not_and_negatives(processed_tokens))
     } else {
         Err(error)
     }
 }
 
-fn parse_mul<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode<'a>, Error> {
+fn neg_to_node<'a>(a: &'a Box<ProcessedToken>) -> Result<ParseNode, Error> {
+    let token_slice = std::slice::from_ref(a.as_ref());
+    let node = parse_add(token_slice)?;
+    Ok(ParseNode::Neg(Box::new(node)))
+}
+
+fn parse_mul<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
     tokens
         .split(|x| *x == ProcessedToken::Mul)
         .map(|x| match &x[0] {
+            ProcessedToken::Bool(a) => Ok(ParseNode::Bool(Val::Bool(*a))),
+            ProcessedToken::String(a) => Ok(ParseNode::String(Val::Str(a.clone()))),
+            ProcessedToken::Neg(a) => neg_to_node(a),
             ProcessedToken::Number(a) => Ok(ParseNode::Number(Val::Number(*a))),
             ProcessedToken::Parentheses(a) => parse_add(a),
-            _ => panic!("dafuq"),
+            ProcessedToken::VarName(a) => Ok(ParseNode::VarName(a.clone())),
+            a => panic!("dafuq {:?}", a),
         })
         .fold_first(|a, b| Ok(ParseNode::Mul(Box::new([a?, b?]))))
-        .ok_or("err")?
+        .ok_or("Error parsing multiplication")?
 }
 
-fn parse_div<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode<'a>, Error> {
+fn parse_div<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
     tokens
         .split(|x| *x == ProcessedToken::Div)
         .map(|x| parse_mul(x))
         .fold_first(|a, b| Ok(ParseNode::Div(Box::new([a?, b?]))))
-        .ok_or("err")?
+        .ok_or("Error parsing division")?
 }
 
-fn check_negatives<'a>(tokens: &'a [ProcessedToken]) -> Vec<ProcessedToken<'a>> {
+fn parse_rem<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
     tokens
-        .iter()
-        .cloned()
-        .enumerate()
-        .map(|(i, t)| {
-            if t == ProcessedToken::Sub {
-                if i == 0 {
-                    ProcessedToken::TempNeg
-                } else {
-                    match tokens[i - 1] {
-                        ProcessedToken::Number(_)
-                        | ProcessedToken::CloseParentheses
-                        | ProcessedToken::VarName(_) => ProcessedToken::Sub,
-                        _ => ProcessedToken::TempNeg,
-                    }
-                }
-            } else {
-                t
-            }
-        })
-        .collect::<Vec<_>>()
+        .split(|x| *x == ProcessedToken::Rem)
+        .map(|x| parse_div(x))
+        .fold_first(|a, b| Ok(ParseNode::Rem(Box::new([a?, b?]))))
+        .ok_or("Error parsing division")?
 }
 
-fn parse_sub<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode<'a>, Error> {
+fn parse_sub<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
     tokens
         .split(|x| *x == ProcessedToken::Sub)
-        .map(|x| parse_div(x))
+        .map(|x| parse_rem(x))
         .fold_first(|a, b| Ok(ParseNode::Sub(Box::new([a?, b?]))))
-        .ok_or("err")?
+        .ok_or("Error parsing subtraction")?
 }
 
-fn parse_add<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode<'a>, Error> {
+fn parse_add<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
     tokens
         .split(|x| *x == ProcessedToken::Add)
         .map(|x| parse_sub(x))
         .fold_first(|a, b| Ok(ParseNode::Add(Box::new([a?, b?]))))
-        .ok_or("err")?
+        .ok_or("Error parsing subtraction")?
 }
 
-pub(crate) fn parse<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode<'a>, Error> {
-    parse_add(tokens)
+fn parse_ltoe<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
+    tokens
+        .split(|x| *x == ProcessedToken::Ltoe)
+        .map(|x| parse_add(x))
+        .fold_first(|a, b| Ok(ParseNode::Ltoe(Box::new([a?, b?]))))
+        .ok_or("Error parsing addition")?
+}
+
+fn parse_lt<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
+    tokens
+        .split(|x| *x == ProcessedToken::Lt)
+        .map(|x| parse_ltoe(x))
+        .fold_first(|a, b| Ok(ParseNode::Lt(Box::new([a?, b?]))))
+        .ok_or("Error parsing addition")?
+}
+
+fn parse_gtoe<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
+    tokens
+        .split(|x| *x == ProcessedToken::Gtoe)
+        .map(|x| parse_lt(x))
+        .fold_first(|a, b| Ok(ParseNode::Gtoe(Box::new([a?, b?]))))
+        .ok_or("Error parsing addition")?
+}
+
+fn parse_gt<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
+    tokens
+        .split(|x| *x == ProcessedToken::Gt)
+        .map(|x| parse_gtoe(x))
+        .fold_first(|a, b| Ok(ParseNode::Gt(Box::new([a?, b?]))))
+        .ok_or("Error parsing addition")?
+}
+
+fn parse_noteq<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
+    tokens
+        .split(|x| *x == ProcessedToken::NotEq)
+        .map(|x| parse_gt(x))
+        .fold_first(|a, b| Ok(ParseNode::NotEq(Box::new([a?, b?]))))
+        .ok_or("Error parsing addition")?
+}
+
+fn parse_eq<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
+    tokens
+        .split(|x| *x == ProcessedToken::Eq)
+        .map(|x| parse_noteq(x))
+        .fold_first(|a, b| Ok(ParseNode::Eq(Box::new([a?, b?]))))
+        .ok_or("Error parsing addition")?
+}
+
+fn parse_or<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
+    tokens
+        .split(|x| *x == ProcessedToken::Or)
+        .map(|x| parse_eq(x))
+        .fold_first(|a, b| Ok(ParseNode::Or(Box::new([a?, b?]))))
+        .ok_or("Error parsing logical or")?
+}
+
+fn parse_and<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
+    tokens
+        .split(|x| *x == ProcessedToken::And)
+        .map(|x| parse_or(x))
+        .fold_first(|a, b| Ok(ParseNode::And(Box::new([a?, b?]))))
+        .ok_or("Error parsing logical and")?
+}
+
+pub(crate) fn parse<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
+    parse_and(tokens)
 }
