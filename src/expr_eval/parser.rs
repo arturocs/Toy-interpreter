@@ -176,9 +176,10 @@ fn parse_div<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode<'a>, Error> {
 fn check_negatives<'a>(tokens: &'a [ProcessedToken]) -> Vec<ProcessedToken<'a>> {
     tokens
         .iter()
+        .cloned()
         .enumerate()
         .map(|(i, t)| {
-            if *t == ProcessedToken::Sub {
+            if t == ProcessedToken::Sub {
                 if i == 0 {
                     ProcessedToken::TempNeg
                 } else {
@@ -190,7 +191,7 @@ fn check_negatives<'a>(tokens: &'a [ProcessedToken]) -> Vec<ProcessedToken<'a>> 
                     }
                 }
             } else {
-                t.clone()
+                t
             }
         })
         .collect::<Vec<_>>()
