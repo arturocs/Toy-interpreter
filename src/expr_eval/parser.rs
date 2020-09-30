@@ -28,19 +28,50 @@ pub(crate) enum ParseNode<'a> {
     Or(Box<[ParseNode<'a>; 2]>),
     Not(Box<ParseNode<'a>>),
 }
+#[derive(PartialEq, Debug, Clone)]
+pub(crate) enum ProcessedToken<'a> {
+    VarName(&'a str),
+    Number(f64),
+    String(&'a str),
+    Bool(bool),
+    FnCall(&'a str, Vec<ProcessedToken<'a>>),
+    VecAccess(&'a str, Vec<ProcessedToken<'a>>),
+    //Dot
+    Parentheses(Vec<ProcessedToken<'a>>),
+    Brackets(Vec<ProcessedToken<'a>>),
+    OpenParentheses,
+    CloseParentheses,
+    Mul,
+    Div,
+    Rem,
+    Add,
+    Sub,
+    Eq,
+    NotEq,
+    Gt,
+    Lt,
+    Gtoe,
+    Ltoe,
+    And,
+    Or,
+    Not,
+    Comma,
+    TempNeg,
+    Neg(Box<ProcessedToken<'a>>),
+}
 
-fn find_matching_parentheses<'a>(i: &mut usize, tokens: &'a [Token]) -> Result<usize, Error> {
+fn find_matching_parentheses<'a>(i: usize, tokens: &'a [Token]) -> Result<usize, Error> {
     let mut nested_parentheses = -1;
     let mut last_parentheses = 0;
     let mut found = false;
 
-    dbg!(tokens);
-    dbg!(*i);
+    //dbg!(tokens);
+    //dbg!(i);
 
-    for index in (0..=*i).rev() {
-        dbg!(&tokens[index]);
+    for index in i + 1..tokens.len() {
+        //    dbg!(&tokens[index]);
         match tokens[index] {
-            Token::OpenParentheses => {
+            Token::CloseParentheses => {
                 nested_parentheses += 1;
                 if nested_parentheses == 0 {
                     last_parentheses = index;
@@ -48,13 +79,13 @@ fn find_matching_parentheses<'a>(i: &mut usize, tokens: &'a [Token]) -> Result<u
                     break;
                 }
             }
-            Token::CloseParentheses => nested_parentheses -= 1,
+            Token::OpenParentheses => nested_parentheses -= 1,
 
             _ => {}
         }
     }
 
-    dbg!(last_parentheses);
+    // dbg!(last_parentheses);
     if found {
         Ok(last_parentheses)
     } else {
@@ -62,194 +93,125 @@ fn find_matching_parentheses<'a>(i: &mut usize, tokens: &'a [Token]) -> Result<u
     }
 }
 
-fn find_prioritary_operation<'a>(i: &mut usize, tokens: &'a [Token]) -> Option<(usize, usize)> {
-    let mut start_range = 0;
-    let mut end_range = 0;
-    let mut found = false;
-    dbg!(tokens);
-    dbg!(*i);
-    dbg!(&tokens[*i]);
-    for index in (0..=*i).rev() {
-        dbg!(index);
-        dbg!(&tokens[index]);
-        match tokens[index] {
-            Token::Mul | Token::Div | Token::Rem => {
-                start_range = index - 1;
-                if !found {
-                    end_range = index + 1;
-                    found = true;
-                }
-            }
-            Token::Number(_) => {}
-            _ if found => break,
-            _ => {}
-        }
-    }
-    if found {
-        Some((start_range, end_range))
-    } else {
-        None
-    }
-}
-
-fn parse_add<'a>(
-    mut i: &mut usize,
+fn process_parentheses<'a>(
     tokens: &'a [Token],
-    current_number: ParseNode<'a>,
-) -> Result<ParseNode<'a>, Error> {
-    dbg!(&i);
-    dbg!(tokens);
-    let prioritary_range = find_prioritary_operation(&mut i, tokens);
-    dbg!(prioritary_range);
+    i: &mut usize,
+) -> Result<ProcessedToken<'a>, Error> {
+    //llamar a process tokens en el nuevo rango
+    let parentheses_end = find_matching_parentheses(*i, tokens)?;
+    // dbg!(parentheses_end);
+    let parentheses_content = &tokens[*i + 1..parentheses_end];
+    *i = parentheses_end;
+    Ok(ProcessedToken::Parentheses(process_tokens(
+        parentheses_content,
+    )?))
+}
 
-    match prioritary_range {
-        Some((start, end)) => {
-            let priority = &tokens[start..=end];
-            let current = &tokens[end + 1..=(*i + 2)];
-            let next = &tokens[..start];
-            let priority_result = parse(&mut (priority.len() - 1), priority);
-            dbg!(&priority_result);
-            let without_op = &current[1..];
-            let current_result = match dbg!(current.first()) {
-                Some(Token::Add) => Ok(ParseNode::Add(Box::new([
-                    priority_result?,
-                    parse(&mut (without_op.len() - 1), without_op)?,
-                ]))),
-                None => priority_result,
-                a => todo!("{:?}", a),
-            };
-            dbg!(&current_result);
-
-            let next_result = match dbg!(next.last()) {
-                Some(Token::Mul) => Ok(ParseNode::Mul(join_nodes(
-                    next.len() - 2,
-                    next,
-                    current_result?,
-                )?)),
-                Some(Token::Div) => Ok(ParseNode::Div(join_nodes(
-                    next.len() - 2,
-                    next,
-                    current_result?,
-                )?)),
-                Some(Token::Add) => Ok(ParseNode::Add(join_nodes(
-                    next.len() - 2,
-                    next,
-                    current_result?,
-                )?)),
-                Some(Token::Number(_)) => parse_number(&mut i, tokens),
-                None => current_result,
-                a => todo!("{:?}", a),
-            };
-
-            dbg!(priority);
-            dbg!(current);
-            dbg!(next);
-
-            //dbg!(&priority_result);
-            //dbg!(current_result);
-            dbg!(&next_result);
-
-            next_result
-            //todo!()
+pub(crate) fn process_tokens<'a>(tokens: &'a [Token]) -> Result<Vec<ProcessedToken<'a>>, Error> {
+    let mut processed_tokens = Vec::with_capacity(tokens.len());
+    let mut index = 0;
+    let mut error = "";
+    while index < tokens.len() {
+        match tokens[index] {
+            Token::VarName(a) => processed_tokens.push(ProcessedToken::VarName(a)),
+            Token::Number(a) => processed_tokens.push(ProcessedToken::Number(a)),
+            Token::String(a) => processed_tokens.push(ProcessedToken::String(a)),
+            Token::Bool(a) => processed_tokens.push(ProcessedToken::Bool(a)),
+            Token::OpenParentheses => {
+                processed_tokens.push(process_parentheses(tokens, &mut index)?)
+            }
+            Token::CloseParentheses => {
+                error = "Unmatched )";
+                break;
+            }
+            Token::Mul => processed_tokens.push(ProcessedToken::Mul),
+            Token::Div => processed_tokens.push(ProcessedToken::Div),
+            Token::Rem => processed_tokens.push(ProcessedToken::Rem),
+            Token::Add => processed_tokens.push(ProcessedToken::Add),
+            Token::Sub => processed_tokens.push(ProcessedToken::Sub),
+            Token::Eq => processed_tokens.push(ProcessedToken::Eq),
+            Token::NotEq => processed_tokens.push(ProcessedToken::NotEq),
+            Token::Gt => processed_tokens.push(ProcessedToken::Gt),
+            Token::Lt => processed_tokens.push(ProcessedToken::Lt),
+            Token::Gtoe => processed_tokens.push(ProcessedToken::Gtoe),
+            Token::Ltoe => processed_tokens.push(ProcessedToken::Ltoe),
+            Token::And => processed_tokens.push(ProcessedToken::And),
+            Token::Or => processed_tokens.push(ProcessedToken::Or),
+            Token::Not => processed_tokens.push(ProcessedToken::Not),
+            Token::Comma => todo!("Commas"),
+            Token::FnCallStart(_) => todo!("Functions"),
+            Token::VecAccessStart(_) => todo!("Vectors"),
+            Token::OpenSBrackets => todo!("Vectors"),
+            Token::CloseSBrackets => todo!("Vectors"),
         }
-        None => Ok(ParseNode::Add(Box::new([
-            parse(&mut i, tokens)?,
-            current_number,
-        ]))),
+        index += 1;
+    }
+    if error == "" {
+        Ok(processed_tokens)
+    } else {
+        Err(error)
     }
 }
 
-fn parse_number<'a>(i: &mut usize, tokens: &'a [Token]) -> Result<ParseNode<'a>, Error> {
-    let token_to_node = |i| match tokens.get(i) {
-        Some(Token::Number(n)) => ParseNode::Number(Val::Number(*n)),
-        _ => panic!("Expected number"),
-    };
-    let current_number = token_to_node(*i);
-    dbg!(&current_number);
+fn parse_mul<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode<'a>, Error> {
+    tokens
+        .split(|x| *x == ProcessedToken::Mul)
+        .map(|x| match &x[0] {
+            ProcessedToken::Number(a) => Ok(ParseNode::Number(Val::Number(*a))),
+            ProcessedToken::Parentheses(a) => parse_add(a),
+            _ => panic!("dafuq"),
+        })
+        .fold_first(|a, b| Ok(ParseNode::Mul(Box::new([a?, b?]))))
+        .ok_or("err")?
+}
 
-    match (*i).checked_sub(2) {
-        Some(mut j) => match tokens[j + 1] {
-            Token::Mul => {
-                match find_prioritary_operation(&mut (j + 1), tokens) {
-                    Some((a, b)) => {
-                        match dbg!(&tokens[a + 1]) {
-                            Token::Add => Ok(ParseNode::Add(Box::new([
-                                parse(&mut j, &tokens[..=a + 1])?,
-                                parse(&mut j, &tokens[a..=b])?,
-                            ]))),
-                            _ => Ok(ParseNode::Mul(join_nodes(a, tokens, current_number)?))//panic!("only add {:?}",&tokens[a..=b]),
-                        }
-                        // parse(i, &tokens[a..=b])
+fn parse_div<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode<'a>, Error> {
+    tokens
+        .split(|x| *x == ProcessedToken::Div)
+        .map(|x| parse_mul(x))
+        .fold_first(|a, b| Ok(ParseNode::Div(Box::new([a?, b?]))))
+        .ok_or("err")?
+}
+
+fn check_negatives<'a>(tokens: &'a [ProcessedToken]) -> Vec<ProcessedToken<'a>> {
+    tokens
+        .iter()
+        .enumerate()
+        .map(|(i, t)| {
+            if *t == ProcessedToken::Sub {
+                if i == 0 {
+                    ProcessedToken::TempNeg
+                } else {
+                    match tokens[i - 1] {
+                        ProcessedToken::Number(_)
+                        | ProcessedToken::CloseParentheses
+                        | ProcessedToken::VarName(_) => ProcessedToken::Sub,
+                        _ => ProcessedToken::TempNeg,
                     }
-                    None => panic!("bug"),
                 }
-                // todo!()
-            } //Ok(ParseNode::Mul(join_nodes(i, tokens, current_number)?)),
-            Token::Div => Ok(ParseNode::Div(join_nodes(j, tokens, current_number)?)),
-            Token::Rem => Ok(ParseNode::Rem(join_nodes(j, tokens, current_number)?)),
-            Token::Add => parse_add(&mut j, tokens, current_number),
-            _ => todo!("{:?}", tokens[j + 1]),
-        },
-        None => Ok(current_number),
-    }
+            } else {
+                t.clone()
+            }
+        })
+        .collect::<Vec<_>>()
 }
 
-//Find better name
-fn join_nodes<'a>(
-    mut i: usize,
-    block: &'a [Token],
-    next: ParseNode<'a>,
-) -> Result<Box<[ParseNode<'a>; 2]>, Error> {
-    Ok(Box::new([parse(&mut i, block)?, next]))
+fn parse_sub<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode<'a>, Error> {
+    tokens
+        .split(|x| *x == ProcessedToken::Sub)
+        .map(|x| parse_div(x))
+        .fold_first(|a, b| Ok(ParseNode::Sub(Box::new([a?, b?]))))
+        .ok_or("err")?
 }
 
-fn parse_parentheses<'a>(i: &mut usize, tokens: &'a [Token]) -> Result<ParseNode<'a>, Error> {
-    *i -= 1;
-    let parentheses_end = find_matching_parentheses(i, tokens)?;
-    dbg!(parentheses_end);
-    let parentheses_slice = &tokens[parentheses_end + 1..=*i];
-    let next = &tokens[..parentheses_end];
-    dbg!(next);
-    dbg!(parentheses_slice);
-    let block = parse(&mut (parentheses_slice.len() - 1), parentheses_slice);
-
-    match dbg!(next.last()) {
-        Some(Token::Mul) => Ok(ParseNode::Mul(join_nodes(next.len() - 2, next, block?)?)),
-        Some(Token::Div) => Ok(ParseNode::Div(join_nodes(next.len() - 2, next, block?)?)),
-        Some(Token::Add) => Ok(ParseNode::Add(join_nodes(next.len() - 2, next, block?)?)),
-        Some(Token::Number(_)) => parse_number(i, tokens),
-        None => block,
-        a => todo!("{:?}", a),
-    }
+fn parse_add<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode<'a>, Error> {
+    tokens
+        .split(|x| *x == ProcessedToken::Add)
+        .map(|x| parse_sub(x))
+        .fold_first(|a, b| Ok(ParseNode::Add(Box::new([a?, b?]))))
+        .ok_or("err")?
 }
 
-pub(crate) fn parse<'a>(i: &mut usize, tokens: &'a [Token]) -> Result<ParseNode<'a>, Error> {
-    dbg!(*i);
-    dbg!(tokens);
-    match dbg!(tokens.get(*i)) {
-        Some(Token::VarName(_)) => todo!("Variable"),
-        Some(Token::Number(_)) => parse_number(i, tokens),
-        Some(Token::String(_)) => todo!("String"),
-        Some(Token::Bool(_)) => todo!("Bool"),
-        Some(Token::OpenParentheses) => panic!("{:#?} \n {} Open par", tokens, i),
-        Some(Token::CloseParentheses) => parse_parentheses(i, tokens),
-        Some(Token::Mul) => todo!("mul"),
-        Some(Token::Div) => todo!("Div"),
-        Some(Token::Rem) => todo!("Rem"),
-        Some(Token::Add) => {
-            panic!("Alone + {:#?} \n {}", tokens, i);
-        }
-        Some(Token::Sub) => todo!("Sub"),
-        Some(Token::Eq) => todo!("Eq"),
-        Some(Token::NotEq) => todo!("NotEq"),
-        Some(Token::And) => todo!("And"),
-        Some(Token::Or) => todo!("Or"),
-        Some(Token::Not) => todo!("Not"),
-        Some(Token::Comma) => todo!("Comma"),
-        Some(Token::Ltoe) => todo!("Ltoe"),
-        Some(Token::Gtoe) => todo!("Gtoe"),
-        Some(Token::Lt) => todo!("Lt"),
-        Some(Token::Gt) => todo!("Gt"),
-        None => panic!("No token found"),
-    }
+pub(crate) fn parse<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode<'a>, Error> {
+    parse_add(tokens)
 }
