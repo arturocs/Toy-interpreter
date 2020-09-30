@@ -9,7 +9,6 @@ edition = "2018"
 [dependencies]
 regex = "1"
 lazy_static = "1.4.0"
-v_eval = "0.6"
 
 [profile.release]
 debug = true
