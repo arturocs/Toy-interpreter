@@ -27,7 +27,7 @@ pub enum Token {
     And,
     Or,
     Not,
-    Comma,
+    //Comma,
 }
 
 fn check_var_f64_and_str(capture: &str) -> Result<Token, &'static str> {
@@ -50,7 +50,7 @@ pub fn tokenize(expr: &str) -> Result<Vec<Token>, &'static str> {
     lazy_static! {
         static ref PATTERNS : String = [
             r"\d+\.?\d*",             //Number
-            
+
             r"\s*true\s*|\s*true\s*", //Bool
             //r"[^\{\}\n=]\(",        //Starting part of a function call
             //r"[^\{\}\n=]\[",        //Starting part of a vector access
@@ -70,7 +70,7 @@ pub fn tokenize(expr: &str) -> Result<Vec<Token>, &'static str> {
             r">",             //Greater than operator
             r"&&",             //Logical and operator
             r"\|\|",             //Logical or operator
-            r",",             //Comma operator
+            //r",",             //Comma operator
             r#""[^"\n]*""#,                //String
             r"[^\{\}\n=\(\)]", //Variable
         ]
@@ -95,7 +95,7 @@ pub fn tokenize(expr: &str) -> Result<Vec<Token>, &'static str> {
             "!=" => Ok(Token::NotEq),
             "&&" => Ok(Token::And),
             "||" => Ok(Token::Or),
-            "," => Ok(Token::Comma),
+            //"," => Ok(Token::Comma),
             "!" => Ok(Token::Not),
             "/" => Ok(Token::Div),
             "%" => Ok(Token::Rem),

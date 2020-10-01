@@ -161,7 +161,7 @@ pub fn process_tokens<'a>(tokens: &'a [Token]) -> Result<Vec<ProcessedToken>, Er
             Token::And => processed_tokens.push(ProcessedToken::And),
             Token::Or => processed_tokens.push(ProcessedToken::Or),
             Token::Not => processed_tokens.push(ProcessedToken::Not(None)),
-            Token::Comma => todo!("Commas"),
+            //Token::Comma => todo!("Commas"),
             // Token::FnCallStart(_) => todo!("Functions"),
             // Token::VecAccessStart(_) => todo!("Vectors"),
             // Token::OpenSBrackets => todo!("Vectors"),
