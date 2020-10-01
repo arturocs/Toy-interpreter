@@ -11,7 +11,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let instructions = tokenize(&contents);
     //dbg!(&instructions);
     let ast = parse(&instructions)?;
-   // dbg!(&ast);
+    // dbg!(&ast);
     runtime::execute(&ast, &mut env)?;
     Ok(())
 }

@@ -37,8 +37,6 @@ while a < b {
     c.bench_function("parse", |b| b.iter(|| parse(black_box(&tokens))));
 }
 
-
-
 pub fn criterion_benchmark3(c: &mut Criterion) {
     let tokens = tokenize(
         r#"a=0

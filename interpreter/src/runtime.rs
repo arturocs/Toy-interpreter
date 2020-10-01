@@ -40,7 +40,10 @@ fn execute_assignation(
     Ok(())
 }
 
-fn execute_print(expression: &ParseNode, env: &mut evaluator::Environment) -> Result<(), &'static str> {
+fn execute_print(
+    expression: &ParseNode,
+    env: &mut evaluator::Environment,
+) -> Result<(), &'static str> {
     match expression {
         ParseNode::Expression(expr) => {
             println!("{}", env.execute(expr)?);
