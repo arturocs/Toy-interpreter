@@ -2,7 +2,7 @@ use std::{cmp::Ordering, fmt, str::FromStr};
 type Error = &'static str;
 
 #[derive(PartialEq, Debug, Clone)]
-pub(crate) enum Val {
+pub enum Val {
     Bool(bool),
     Number(f64),
     Str(String),

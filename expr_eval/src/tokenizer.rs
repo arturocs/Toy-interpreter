@@ -1,6 +1,7 @@
 use regex::Regex;
+
 #[derive(PartialEq, Debug, Clone)]
-pub(crate) enum Token {
+pub enum Token {
     VarName(String),
     Number(f64),
     String(String),
@@ -45,11 +46,11 @@ fn check_var_f64_and_str(capture: &str) -> Result<Token, &'static str> {
     }
 }
 
-pub(crate) fn tokenize(expr: &str) -> Result<Vec<Token>, &'static str> {
+pub fn tokenize(expr: &str) -> Result<Vec<Token>, &'static str> {
     lazy_static! {
         static ref PATTERNS : String = [
             r"\d+\.?\d*",             //Number
-            r#"".*""#,                //String
+            
             r"\s*true\s*|\s*true\s*", //Bool
             //r"[^\{\}\n=]\(",        //Starting part of a function call
             //r"[^\{\}\n=]\[",        //Starting part of a vector access
@@ -70,6 +71,7 @@ pub(crate) fn tokenize(expr: &str) -> Result<Vec<Token>, &'static str> {
             r"&&",             //Logical and operator
             r"\|\|",             //Logical or operator
             r",",             //Comma operator
+            r#""[^"\n]*""#,                //String
             r"[^\{\}\n=\(\)]", //Variable
         ]
         .join("|");

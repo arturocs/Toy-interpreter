@@ -1,10 +1,10 @@
-use crate::expr_eval::tokenizer::Token;
-use crate::expr_eval::val::Val;
+use crate::tokenizer::Token;
+use crate::val::Val;
 
 type Error = &'static str;
 
 #[derive(PartialEq, Debug, Clone)]
-pub(crate) enum ParseNode {
+pub enum ParseNode {
     VarName(String),
     Number(Val),
     String(Val),
@@ -29,7 +29,7 @@ pub(crate) enum ParseNode {
     Not(Box<ParseNode>),
 }
 #[derive(PartialEq, Debug, Clone)]
-pub(crate) enum ProcessedToken {
+pub enum ProcessedToken {
     VarName(String),
     Number(f64),
     String(String),
@@ -74,7 +74,6 @@ fn find_matching_parentheses<'a>(i: usize, tokens: &'a [Token]) -> Result<usize,
                 }
             }
             Token::OpenParentheses => nested_parentheses -= 1,
-
             _ => {}
         }
     }
@@ -129,7 +128,7 @@ fn process_not_and_negatives<'a>(tokens: Vec<ProcessedToken>) -> Vec<ProcessedTo
     processed_tokens
 }
 
-pub(crate) fn process_tokens<'a>(tokens: &'a [Token]) -> Result<Vec<ProcessedToken>, Error> {
+pub fn process_tokens<'a>(tokens: &'a [Token]) -> Result<Vec<ProcessedToken>, Error> {
     let mut processed_tokens = Vec::with_capacity(tokens.len());
     let mut index = 0;
     let mut error = "";
@@ -137,7 +136,9 @@ pub(crate) fn process_tokens<'a>(tokens: &'a [Token]) -> Result<Vec<ProcessedTok
         match &tokens[index] {
             Token::VarName(a) => processed_tokens.push(ProcessedToken::VarName(a.clone())),
             Token::Number(a) => processed_tokens.push(ProcessedToken::Number(*a)),
-            Token::String(a) => processed_tokens.push(ProcessedToken::String(a.clone())),
+            Token::String(a) => processed_tokens.push(ProcessedToken::String(
+                a.trim_matches('"').replace("\\n", "\n"),
+            )),
             Token::Bool(a) => processed_tokens.push(ProcessedToken::Bool(*a)),
             Token::OpenParentheses => {
                 processed_tokens.push(process_parentheses(tokens, &mut index)?)
@@ -191,7 +192,7 @@ fn parse_mul<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
             ProcessedToken::Number(a) => Ok(ParseNode::Number(Val::Number(*a))),
             ProcessedToken::Parentheses(a) => parse_add(a),
             ProcessedToken::VarName(a) => Ok(ParseNode::VarName(a.clone())),
-            a => panic!("dafuq {:?}", a),
+            _ => Err("Error parsing element"),
         })
         .fold_first(|a, b| Ok(ParseNode::Mul(Box::new([a?, b?]))))
         .ok_or("Error parsing multiplication")?
@@ -293,6 +294,6 @@ fn parse_and<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
         .ok_or("Error parsing logical and")?
 }
 
-pub(crate) fn parse<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
+pub fn parse<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
     parse_and(tokens)
 }
