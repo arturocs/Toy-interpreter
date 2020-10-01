@@ -1,0 +1,10 @@
+a=0
+b=30
+c=""
+while a < b {
+    a = a + 1
+    if a % 5 == 0 {
+        c = c + a + "\n" + "multiple of 5" + "\n"
+    }
+}
+print c
