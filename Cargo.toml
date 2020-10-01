@@ -16,6 +16,7 @@ expr_eval={path = "./expr_eval"}
 debug = true
 lto = true
 codegen-units = 1
+panic = "abort"
 
 [workspace]
 members = ["bench", "expr_eval", "interpreter"]
