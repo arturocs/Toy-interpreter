@@ -9,8 +9,13 @@ edition = "2018"
 [dependencies]
 regex = "1"
 lazy_static = "1.4.0"
+interpreter={path = "./interpreter"}
+expr_eval={path = "./expr_eval"}
 
 [profile.release]
 debug = true
 lto = true
 codegen-units = 1
+
+[workspace]
+members = ["bench", "expr_eval", "interpreter"]
