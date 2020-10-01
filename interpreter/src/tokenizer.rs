@@ -1,7 +1,7 @@
 use regex::{Regex, RegexBuilder};
 
 #[derive(PartialEq, Debug)]
-pub(crate) enum Token<'a> {
+pub enum Token<'a> {
     If,
     Else,
     While,
@@ -19,7 +19,7 @@ fn is_assignation(text: &str) -> bool {
     RE.is_match(text)
 }
 
-pub(crate) fn tokenize(source_code: &str) -> Vec<Token> {
+pub fn tokenize(source_code: &str) -> Vec<Token> {
     let patterns = [
         r"\s*if\s+",                      //if
         r"\s*else\s+",                    //else

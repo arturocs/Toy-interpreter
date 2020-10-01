@@ -1,8 +1,9 @@
-use crate::{expr_eval, tokenizer::*};
+use crate::tokenizer::*;
+use expr_eval;
 type Error = &'static str;
 
 #[derive(PartialEq, Debug, Clone)]
-pub(crate) enum ParseNode {
+pub enum ParseNode {
     If(Box<ParseNode>, Vec<ParseNode>, Option<Vec<ParseNode>>), //If(Expression, If block, Else Block)
     While(Box<ParseNode>, Vec<ParseNode>),                      // While(Condition, Block)
     Assignation(String, Box<ParseNode>),
@@ -10,11 +11,11 @@ pub(crate) enum ParseNode {
     Print(Box<ParseNode>),
 }
 
-pub(crate) fn check_result<T>(condition: bool, result: T, error: Error) -> Result<T, Error> {
+fn check_result<T>(condition: bool, result: T, error: Error) -> Result<T, Error> {
     if condition {
         Ok(result)
     } else {
-        panic!(error)
+        Err(error)
     }
 }
 
@@ -103,7 +104,7 @@ fn parse_expression<'a>(expression: &'a str) -> Result<Box<ParseNode>, Error> {
     Ok(Box::new(ParseNode::Expression(expr_ast)))
 }
 
-pub(crate) fn parse<'a>(tokens: &'a [Token]) -> Result<Vec<ParseNode>, Error> {
+pub fn parse<'a>(tokens: &'a [Token]) -> Result<Vec<ParseNode>, Error> {
     let mut ast = vec![];
     let mut error = "";
     let mut i: usize = 0;
