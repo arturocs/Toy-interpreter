@@ -6,6 +6,7 @@ pub enum ExprToken {
     Number(f64),
     String(String),
     Bool(bool),
+    Null,
     //FnCallStart(&'a str),
     //VecAccessStart(&'a str),
     //Dot
@@ -88,7 +89,7 @@ pub fn tokenize_expr(expr: &str) -> Result<Vec<ExprToken>, &'static str> {
         .map(|capture| match capture {
             "true" => Ok(ExprToken::Bool(true)),
             "false" => Ok(ExprToken::Bool(false)),
-            "(" => Ok(Token::OpenParentheses),
+            "null" => Ok(ExprToken::Null),
             "(" => Ok(ExprToken::OpenParentheses),
             ")" => Ok(ExprToken::CloseParentheses),
             "[" => Ok(ExprToken::OpenSBrackets),

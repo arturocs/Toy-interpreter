@@ -37,7 +37,7 @@ impl Environment {
             ParseExprNode::Number(n) => Ok(n.clone()),
             ParseExprNode::String(s) => Ok(s.clone()),
             ParseExprNode::Bool(b) => Ok(b.clone()),
-            ParseNode::Neg(n) => Ok(self.execute(&n)?.minus()?),
+            ParseExprNode::Null => Ok(Val::Null),
             ParseExprNode::Neg(n) => Ok(self.execute(&n)?.minus()?),
             ParseExprNode::Mul(s) => self.execute(&s[0])?.mul(self.execute(&s[1])?),
             ParseExprNode::Div(s) => self.execute(&s[0])?.div(self.execute(&s[1])?),

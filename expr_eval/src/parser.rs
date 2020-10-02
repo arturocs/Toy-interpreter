@@ -9,6 +9,7 @@ pub enum ParseExprNode {
     Number(Val),
     String(Val),
     Bool(Val),
+    Null,
     //FnCallStart(&'a str),
     //VecAccessStart(&'a str),
     //Dot
@@ -197,7 +198,7 @@ fn parse_mul<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Erro
         .split(|x| *x == ProcessedExprToken::Mul)
         .map(|x| match &x[0] {
             ProcessedToken::Bool(a) => Ok(ParseNode::Bool(Val::Bool(*a))),
-            ProcessedToken::String(a) => Ok(ParseNode::String(Val::Str(a.clone()))),
+            ProcessedExprToken::Null => Ok(ParseExprNode::Null),
             ProcessedExprToken::Bool(a) => Ok(ParseExprNode::Bool(Val::Bool(*a))),
             ProcessedExprToken::String(a) => Ok(ParseExprNode::String(Val::Str(a.clone()))),
             ProcessedExprToken::Neg(a) => neg_to_node(a),
