@@ -3,7 +3,7 @@ use crate::parser::ParseNode;
 use expr_eval::{self, evaluator, val::Val};
 
 fn execute_if(
-    expr: &expr_eval::parser::ParseNode,
+    expr: &expr_eval::parser::ParseExprNode,
     if_block: &[ParseNode],
     else_block: &Option<Vec<ParseNode>>,
     env: &mut evaluator::Environment,
@@ -19,7 +19,8 @@ fn execute_if(
 }
 
 fn execute_while(
-    expr: &expr_eval::parser::ParseNode,
+    expr: &expr_eval::parser::ParseExprNode,
+
     block: &[ParseNode],
     env: &mut evaluator::Environment,
 ) -> Result<(), &'static str> {
@@ -31,7 +32,7 @@ fn execute_while(
 
 fn execute_assignation(
     variable: &str,
-    value: &expr_eval::parser::ParseNode,
+    value: &expr_eval::parser::ParseExprNode,
     env: &mut evaluator::Environment,
 ) -> Result<(), &'static str> {
     let computed_value = env.execute(&value)?;
@@ -54,7 +55,7 @@ fn execute_print(
 }
 
 fn execute_expression(
-    expr: &expr_eval::parser::ParseNode,
+    expr: &expr_eval::parser::ParseExprNode,
     env: &mut evaluator::Environment,
 ) -> Result<(), &'static str> {
     env.execute(&expr)?;

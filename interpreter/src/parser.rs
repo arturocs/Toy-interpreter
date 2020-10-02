@@ -7,7 +7,7 @@ pub enum ParseNode {
     If(Box<ParseNode>, Vec<ParseNode>, Option<Vec<ParseNode>>), //If(Expression, If block, Else Block)
     While(Box<ParseNode>, Vec<ParseNode>),                      // While(Condition, Block)
     Assignation(String, Box<ParseNode>),
-    Expression(expr_eval::parser::ParseNode),
+    Expression(expr_eval::parser::ParseExprNode),
     Print(Box<ParseNode>),
 }
 
@@ -98,8 +98,10 @@ fn parse_assignation(assignation_str: &str) -> Result<ParseNode, Error> {
 }
 
 fn parse_expression<'a>(expression: &'a str) -> Result<Box<ParseNode>, Error> {
-    let expr_tokens = expr_eval::tokenizer::tokenize(expression)?;
-    let processed_tokens = expr_eval::parser::process_tokens(&expr_tokens)?;
+    let mut expr_tokens = expr_eval::tokenizer::tokenize_expr(expression)?;
+   // dbg!(&expr_tokens);
+    let processed_tokens = expr_eval::parser::process_expr_tokens(&mut expr_tokens)?;
+    //dbg!(&processed_tokens);
     let expr_ast = expr_eval::parser::parse(&processed_tokens)?;
     Ok(Box::new(ParseNode::Expression(expr_ast)))
 }

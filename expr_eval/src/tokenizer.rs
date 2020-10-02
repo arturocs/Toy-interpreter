@@ -1,7 +1,7 @@
 use regex::Regex;
 
 #[derive(PartialEq, Debug, Clone)]
-pub enum Token {
+pub enum ExprToken {
     VarName(String),
     Number(f64),
     String(String),
@@ -30,30 +30,34 @@ pub enum Token {
     //Comma,
 }
 
-fn check_var_f64_and_str(capture: &str) -> Result<Token, &'static str> {
+fn check_remaining_cases(capture: &str) -> Result<ExprToken, &'static str> {
     lazy_static! {
         static ref VAR_REGEX: Regex = Regex::new(r"[^\{\}\n=\(\)]").unwrap();
+        static ref VEC_ACCESS_REGEX: Regex = Regex::new(r"\w+[").unwrap();
     }
     let is_f64 = capture.parse::<f64>();
     if is_f64.is_ok() {
-        Ok(Token::Number(is_f64.unwrap()))
+        Ok(ExprToken::Number(is_f64.unwrap()))
     } else if capture.starts_with('"') && capture.ends_with('"') {
-        Ok(Token::String(capture.to_owned()))
+        Ok(ExprToken::String(capture.to_owned()))
     } else if VAR_REGEX.is_match(capture) {
-        Ok(Token::VarName(capture.to_owned()))
+        Ok(ExprToken::VarName(capture.to_owned()))
+    } else if VEC_ACCESS_REGEX.is_match(capture) {
+        Ok(ExprToken::VecAccessStart(capture.to_owned()))
     } else {
         Err("Unable to match expression")
     }
 }
 
-pub fn tokenize(expr: &str) -> Result<Vec<Token>, &'static str> {
+pub fn tokenize_expr(expr: &str) -> Result<Vec<ExprToken>, &'static str> {
     lazy_static! {
         static ref PATTERNS : String = [
             r"\d+\.?\d*",             //Number
 
             r"\s*true\s*|\s*true\s*", //Bool
+            r"[^\w\d]null[^\w\d]",  //Null
             //r"[^\{\}\n=]\(",        //Starting part of a function call
-            //r"[^\{\}\n=]\[",        //Starting part of a vector access
+            r"\w+\[",        //Starting part of a vector access
             //r"\."                   //Dot operator
             r"\(|\)",          // Parentheses
             r"\[|\]",          //Square brackets
@@ -82,28 +86,29 @@ pub fn tokenize(expr: &str) -> Result<Vec<Token>, &'static str> {
         .map(|cap| cap.get(0).unwrap().as_str().trim())
         .filter(|s| s != &"")
         .map(|capture| match capture {
-            "true" => Ok(Token::Bool(true)),
-            "false" => Ok(Token::Bool(false)),
+            "true" => Ok(ExprToken::Bool(true)),
+            "false" => Ok(ExprToken::Bool(false)),
             "(" => Ok(Token::OpenParentheses),
-            ")" => Ok(Token::CloseParentheses),
-            //"[" => Ok(ExprToken::OpenSBrackets),
-            //"]" => Ok(ExprToken::CloseSBrackets),
-            "*" => Ok(Token::Mul),
-            "+" => Ok(Token::Add),
-            "-" => Ok(Token::Sub),
-            "==" => Ok(Token::Eq),
-            "!=" => Ok(Token::NotEq),
-            "&&" => Ok(Token::And),
-            "||" => Ok(Token::Or),
-            //"," => Ok(Token::Comma),
-            "!" => Ok(Token::Not),
-            "/" => Ok(Token::Div),
-            "%" => Ok(Token::Rem),
-            "<=" => Ok(Token::Ltoe),
-            ">=" => Ok(Token::Gtoe),
-            "<" => Ok(Token::Lt),
-            ">" => Ok(Token::Gt),
-            _ => check_var_f64_and_str(capture),
+            "(" => Ok(ExprToken::OpenParentheses),
+            ")" => Ok(ExprToken::CloseParentheses),
+            "[" => Ok(ExprToken::OpenSBrackets),
+            "]" => Ok(ExprToken::CloseSBrackets),
+            "*" => Ok(ExprToken::Mul),
+            "+" => Ok(ExprToken::Add),
+            "-" => Ok(ExprToken::Sub),
+            "==" => Ok(ExprToken::Eq),
+            "!=" => Ok(ExprToken::NotEq),
+            "&&" => Ok(ExprToken::And),
+            "||" => Ok(ExprToken::Or),
+            "," => Ok(ExprToken::Comma),
+            "!" => Ok(ExprToken::Not),
+            "/" => Ok(ExprToken::Div),
+            "%" => Ok(ExprToken::Rem),
+            "<=" => Ok(ExprToken::Ltoe),
+            ">=" => Ok(ExprToken::Gtoe),
+            "<" => Ok(ExprToken::Lt),
+            ">" => Ok(ExprToken::Gt),
+            _ => check_remaining_cases(capture),
         })
         .collect()
 }
