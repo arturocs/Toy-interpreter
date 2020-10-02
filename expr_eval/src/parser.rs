@@ -11,7 +11,7 @@ pub enum ParseExprNode {
     Bool(Val),
     Null,
     //FnCallStart(&'a str),
-    //VecAccessStart(&'a str),
+    VecAccess(String, Box<ParseExprNode>),
     //Dot
     Vector(Vec<ParseExprNode>),
     Neg(Box<ParseExprNode>),
@@ -36,11 +36,15 @@ pub enum ProcessedExprToken {
     Number(f64),
     String(String),
     Bool(bool),
+    Null,
     //FnCall(&'a str, Vec<ProcessedToken<'a>>),
-    //VecAccess(&'a str, Vec<ProcessedToken<'a>>),
     //Dot
-    Parentheses(Vec<ProcessedToken>),
-    Brackets(Vec<ProcessedToken>),
+    VecAccess(String, Vec<ProcessedExprToken>),
+    Vector(Vec<ProcessedExprToken>),
+    OpenSBrackets,
+    CloseSBrackets,
+    Parentheses(Vec<ProcessedExprToken>),
+    Brackets(Vec<ProcessedExprToken>),
     OpenParentheses,
     CloseParentheses,
     Mul,
@@ -86,7 +90,60 @@ fn find_matching_parentheses<'a>(i: usize, tokens: &'a [ExprToken]) -> Result<us
     }
 }
 
-fn process_parentheses<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ProcessedToken, Error> {
+fn find_matching_square_bracket<'a>(i: usize, tokens: &'a [ExprToken]) -> Result<usize, Error> {
+    let mut nested_bracket = -1;
+    let mut last_bracket = 0;
+    let mut found = false;
+    for index in i + 1..tokens.len() {
+       // dbg!(index);
+       // dbg!(&tokens[index]);
+        match tokens[index] {
+            ExprToken::CloseSBrackets => {
+                nested_bracket += 1;
+                if nested_bracket == 0 {
+                    last_bracket = index;
+                    found = true;
+                    break;
+                }
+            }
+            ExprToken::OpenSBrackets => nested_bracket -= 1,
+            _ => {}
+        }
+    }
+    if found {
+        Ok(last_bracket)
+    } else {
+        Err("Unable to find matching square bracket")
+    }
+}
+
+fn process_vector<'a>(tokens: &'a [ExprToken], i: &mut usize) -> Result<ProcessedExprToken, Error> {
+    // dbg!(&i);
+   //  dbg!(tokens);
+     let bracket_end = find_matching_square_bracket(*i, tokens)?;
+     // dbg!(parentheses_end);
+     let parentheses_content = &tokens[*i + 1..bracket_end];
+     *i = bracket_end;
+     Ok(ProcessedExprToken::Vector(process_expr_tokens(
+         parentheses_content,
+     )?))
+ }
+ 
+ fn process_vector_access<'a>(
+     tokens: &'a [ExprToken],
+     i: &mut usize,
+     name: &String,
+ ) -> Result<ProcessedExprToken, Error> {
+     let bracket_end = find_matching_square_bracket(*i, tokens)?;
+     let parentheses_content = &tokens[*i + 1..bracket_end];
+ 
+     *i = bracket_end;
+     Ok(ProcessedExprToken::VecAccess(
+         name.clone(),
+         process_expr_tokens(parentheses_content)?,
+     ))
+ }
+ 
 fn process_parentheses<'a>(
     tokens: &'a [ExprToken],
     i: &mut usize,
@@ -171,11 +228,17 @@ pub fn process_expr_tokens<'a>(tokens: &'a [ExprToken]) -> Result<Vec<ProcessedE
             ExprToken::And => processed_tokens.push(ProcessedExprToken::And),
             ExprToken::Or => processed_tokens.push(ProcessedExprToken::Or),
             ExprToken::Not => processed_tokens.push(ProcessedExprToken::Not(None)),
-            //Token::Comma => todo!("Commas"),
-            // Token::FnCallStart(_) => todo!("Functions"),
-            // Token::VecAccessStart(_) => todo!("Vectors"),
-            // Token::OpenSBrackets => todo!("Vectors"),
-            // Token::CloseSBrackets => todo!("Vectors"),
+            ExprToken::VecAccessStart(name) => {
+                processed_tokens.push(process_vector_access(tokens, &mut index, name)?)
+            }
+            ExprToken::OpenSBrackets => processed_tokens.push(process_vector(tokens, &mut index)?),
+            ExprToken::CloseSBrackets => {
+                error = "Unmatched ]";
+                break;
+            }
+            ExprToken::Comma => processed_tokens.push(ProcessedExprToken::Comma),
+            
+            ExprToken::Null => processed_tokens.push(ProcessedExprToken::Null),
         }
         index += 1;
     }
@@ -192,12 +255,21 @@ fn neg_to_node<'a>(a: &'a Box<ProcessedExprToken>) -> Result<ParseExprNode, Erro
     Ok(ParseExprNode::Neg(Box::new(node)))
 }
 
-fn parse_mul<'a>(tokens: &'a [ProcessedToken]) -> Result<ParseNode, Error> {
+fn parse_vector(vector: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
+    Ok(ParseExprNode::Vector(
+        vector
+            .split(|x| *x == ProcessedExprToken::Comma)
+            .map(|t| parse(t))
+            .collect::<Result<Vec<_>, _>>()?,
+    ))
+}
+
+
 fn parse_mul<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Mul)
         .map(|x| match &x[0] {
-            ProcessedToken::Bool(a) => Ok(ParseNode::Bool(Val::Bool(*a))),
+            ProcessedExprToken::Vector(v) => parse_vector(v),
             ProcessedExprToken::Null => Ok(ParseExprNode::Null),
             ProcessedExprToken::Bool(a) => Ok(ParseExprNode::Bool(Val::Bool(*a))),
             ProcessedExprToken::String(a) => Ok(ParseExprNode::String(Val::Str(a.clone()))),

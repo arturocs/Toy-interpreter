@@ -8,10 +8,10 @@ pub enum ExprToken {
     Bool(bool),
     Null,
     //FnCallStart(&'a str),
-    //VecAccessStart(&'a str),
+    VecAccessStart(String),
     //Dot
-    //OpenSBrackets,
-    //CloseSBrackets,
+    OpenSBrackets,
+    CloseSBrackets,
     OpenParentheses,
     CloseParentheses,
     Mul,
@@ -28,7 +28,7 @@ pub enum ExprToken {
     And,
     Or,
     Not,
-    //Comma,
+    Comma,
 }
 
 fn check_remaining_cases(capture: &str) -> Result<ExprToken, &'static str> {
@@ -75,7 +75,7 @@ pub fn tokenize_expr(expr: &str) -> Result<Vec<ExprToken>, &'static str> {
             r">",             //Greater than operator
             r"&&",             //Logical and operator
             r"\|\|",             //Logical or operator
-            //r",",             //Comma operator
+            r",",             //Comma operator
             r#""[^"\n]*""#,                //String
             r"[^\{\}\n=\(\)]", //Variable
         ]

@@ -22,4 +22,22 @@ mod tests {
         runtime::execute(&ast, &mut env).unwrap();
         assert_eq!(env.get("a"), Ok(Val::Number(10.0)));
     }
+
+    #[test]
+    fn vector() {
+        let mut env = Environment::new();
+        let code = r#"a = [1+2,3*4,true,[1,2,3],"hello"]"#;
+        let instructions = tokenize(&code);
+       // dbg!(&instructions);
+        let ast = parse(&instructions).unwrap();
+        //dbg!(&ast);
+        runtime::execute(&ast, &mut env).unwrap();
+        assert_eq!(env.get("a"), Ok(Val::Vec(vec![
+            Val::Number(3.0),
+            Val::Number(12.0),
+            Val::Bool(true),
+            Val::Vec(vec![Val::Number(1.0),Val::Number(2.0),Val::Number(3.0)]),
+            Val::Str("hello".to_owned())
+        ])));
+    }
 }

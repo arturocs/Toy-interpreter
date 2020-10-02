@@ -55,6 +55,12 @@ impl Environment {
             ParseExprNode::Lt(s) => Ok(Val::Bool(self.execute(&s[0])? < self.execute(&s[1])?)),
             ParseExprNode::Gtoe(s) => Ok(Val::Bool(self.execute(&s[0])? >= self.execute(&s[1])?)),
             ParseExprNode::Ltoe(s) => Ok(Val::Bool(self.execute(&s[0])? <= self.execute(&s[1])?)),
+            ParseExprNode::VecAccess(_, _) => todo!(),
+            ParseExprNode::Vector(v) => Ok(Val::Vec(
+                v.into_iter()
+                    .map(|n| self.execute(n))
+                    .collect::<Result<Vec<_>, _>>()?,
+            )),
         }
     }
 }
