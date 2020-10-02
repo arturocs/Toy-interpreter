@@ -1,5 +1,8 @@
 use crate::val::Val;
-use crate::exprtoken_processor::ProcessedExprToken;
+use crate::{
+    exprtoken_processor::{process_expr_tokens, ProcessedExprToken},
+    tokenizer::ExprToken,
+};
 type Error = &'static str;
 
 #[derive(PartialEq, Debug, Clone)]
@@ -33,37 +36,51 @@ fn parse_vector(vector: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     Ok(ParseExprNode::Vector(
         vector
             .split(|x| *x == ProcessedExprToken::Comma)
-            .map(|t| parse_expr(t))
+            .map(|t| parse_and(t))
             .collect::<Result<Vec<_>, _>>()?,
     ))
 }
 
-fn neg_to_node<'a>(a: &'a Box<ProcessedExprToken>) -> Result<ParseExprNode, Error> {
-    let token_slice = std::slice::from_ref(a.as_ref());
+fn parse_vector_read(
+    name: &str,
+    index_expr: &[ProcessedExprToken],
+) -> Result<ParseExprNode, Error> {
+    Ok(ParseExprNode::VecAccess(
+        name.to_string(),
+        Box::new(parse_and(&index_expr)?),
+    ))
+}
+
+fn neg_to_node(a: &ProcessedExprToken) -> Result<ParseExprNode, Error> {
+    let token_slice = std::slice::from_ref(a);
     let node = parse_add(token_slice)?;
     Ok(ParseExprNode::Neg(Box::new(node)))
 }
 
+fn parse_final_element(final_element: &ProcessedExprToken) -> Result<ParseExprNode, Error> {
+    match final_element {
+        ProcessedExprToken::VecAccess(name, index_expr) => parse_vector_read(name, index_expr),
+        ProcessedExprToken::Vector(v) => parse_vector(v),
+        ProcessedExprToken::Null => Ok(ParseExprNode::Null),
+        ProcessedExprToken::Bool(a) => Ok(ParseExprNode::Bool(Val::Bool(*a))),
+        ProcessedExprToken::String(a) => Ok(ParseExprNode::String(Val::Str(a.clone()))),
+        ProcessedExprToken::Neg(a) => neg_to_node(a),
+        ProcessedExprToken::Number(a) => Ok(ParseExprNode::Number(Val::Number(*a))),
+        ProcessedExprToken::Parentheses(a) => parse_and(a),
+        ProcessedExprToken::VarName(a) => Ok(ParseExprNode::VarName(a.clone())),
+        _ => Err("Error parsing final element"),
+    }
+}
 
-fn parse_mul<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error> {
+fn parse_mul(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Mul)
-        .map(|x| match &x[0] {
-            ProcessedExprToken::Vector(v) => parse_vector(v),
-            ProcessedExprToken::Null => Ok(ParseExprNode::Null),
-            ProcessedExprToken::Bool(a) => Ok(ParseExprNode::Bool(Val::Bool(*a))),
-            ProcessedExprToken::String(a) => Ok(ParseExprNode::String(Val::Str(a.clone()))),
-            ProcessedExprToken::Neg(a) => neg_to_node(a),
-            ProcessedExprToken::Number(a) => Ok(ParseExprNode::Number(Val::Number(*a))),
-            ProcessedExprToken::Parentheses(a) => parse_expr(a),
-            ProcessedExprToken::VarName(a) => Ok(ParseExprNode::VarName(a.clone())),
-            _ => Err("Error parsing final element"),
-        })
+        .map(|x| parse_final_element(&x[0]))
         .fold_first(|a, b| Ok(ParseExprNode::Mul(Box::new([a?, b?]))))
         .ok_or("Error parsing multiplication")?
 }
 
-fn parse_div<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error> {
+fn parse_div(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Div)
         .map(|x| parse_mul(x))
@@ -71,7 +88,7 @@ fn parse_div<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Erro
         .ok_or("Error parsing division")?
 }
 
-fn parse_rem<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error> {
+fn parse_rem(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Rem)
         .map(|x| parse_div(x))
@@ -79,7 +96,7 @@ fn parse_rem<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Erro
         .ok_or("Error parsing division")?
 }
 
-fn parse_sub<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error> {
+fn parse_sub(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Sub)
         .map(|x| parse_rem(x))
@@ -87,7 +104,7 @@ fn parse_sub<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Erro
         .ok_or("Error parsing subtraction")?
 }
 
-fn parse_add<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error> {
+fn parse_add(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Add)
         .map(|x| parse_sub(x))
@@ -95,7 +112,7 @@ fn parse_add<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Erro
         .ok_or("Error parsing subtraction")?
 }
 
-fn parse_ltoe<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error> {
+fn parse_ltoe(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Ltoe)
         .map(|x| parse_add(x))
@@ -103,7 +120,7 @@ fn parse_ltoe<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Err
         .ok_or("Error parsing addition")?
 }
 
-fn parse_lt<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error> {
+fn parse_lt(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Lt)
         .map(|x| parse_ltoe(x))
@@ -111,7 +128,7 @@ fn parse_lt<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error
         .ok_or("Error parsing addition")?
 }
 
-fn parse_gtoe<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error> {
+fn parse_gtoe(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Gtoe)
         .map(|x| parse_lt(x))
@@ -119,7 +136,7 @@ fn parse_gtoe<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Err
         .ok_or("Error parsing addition")?
 }
 
-fn parse_gt<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error> {
+fn parse_gt(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Gt)
         .map(|x| parse_gtoe(x))
@@ -127,7 +144,7 @@ fn parse_gt<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error
         .ok_or("Error parsing addition")?
 }
 
-fn parse_noteq<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error> {
+fn parse_noteq(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::NotEq)
         .map(|x| parse_gt(x))
@@ -135,7 +152,7 @@ fn parse_noteq<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Er
         .ok_or("Error parsing addition")?
 }
 
-fn parse_eq<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error> {
+fn parse_eq(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Eq)
         .map(|x| parse_noteq(x))
@@ -143,7 +160,7 @@ fn parse_eq<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error
         .ok_or("Error parsing addition")?
 }
 
-fn parse_or<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error> {
+fn parse_or(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Or)
         .map(|x| parse_eq(x))
@@ -151,7 +168,7 @@ fn parse_or<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error
         .ok_or("Error parsing logical or")?
 }
 
-fn parse_and<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error> {
+fn parse_and(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::And)
         .map(|x| parse_or(x))
@@ -159,6 +176,8 @@ fn parse_and<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Erro
         .ok_or("Error parsing logical and")?
 }
 
-pub fn parse_expr<'a>(tokens: &'a [ProcessedExprToken]) -> Result<ParseExprNode, Error> {
-    parse_and(tokens)
+pub fn parse_expr(tokens: &[ExprToken]) -> Result<ParseExprNode, Error> {
+    let processed_tokens = process_expr_tokens(tokens)?;
+    // dbg!(&processed_tokens);
+    parse_and(&processed_tokens)
 }

@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 
 type Error = &'static str;
 
+#[derive(Debug, Default)]
 pub struct Environment {
     variables: BTreeMap<String, Val>,
     //functions : std::collections::HashMap<&str, _>
@@ -20,24 +21,32 @@ impl Environment {
         }
     }*/
     pub fn insert(&mut self, variable: String, value: Val) {
-        &self.variables.insert(variable, value);
+        self.variables.insert(variable, value);
     }
 
-    pub fn get(&mut self, key: &str) -> Result<Val, Error> {
-        Ok(self
-            .variables
-            .get(key)
-            .ok_or("Undeclared variable")?
-            .clone())
+    pub fn get_ref(&mut self, key: &str) -> Result<&Val, Error> {
+        Ok(self.variables.get(key).ok_or("Undeclared variable")?)
     }
 
-    pub fn execute<'a>(&mut self, node: &ParseExprNode) -> Result<Val, Error> {
+    pub fn get_move(&mut self, key: &str) -> Result<Val, Error> {
+        Ok(self.variables.remove(key).ok_or("Undeclared variable")?)
+    }
+
+    pub fn execute(&mut self, node: &ParseExprNode) -> Result<Val, Error> {
         match node {
-            ParseExprNode::VarName(a) => self.get(a),
+            ParseExprNode::VarName(a) => Ok(self.get_ref(a)?.clone()),
             ParseExprNode::Number(n) => Ok(n.clone()),
             ParseExprNode::String(s) => Ok(s.clone()),
             ParseExprNode::Bool(b) => Ok(b.clone()),
             ParseExprNode::Null => Ok(Val::Null),
+            ParseExprNode::VecAccess(name, index) => {
+                Ok(self.get_ref(name)?.clone().index(self.execute(index)?)?)
+            }
+            ParseExprNode::Vector(v) => Ok(Val::Vec(
+                v.iter()
+                    .map(|n| self.execute(n))
+                    .collect::<Result<Vec<_>, _>>()?,
+            )),
             ParseExprNode::Neg(n) => Ok(self.execute(&n)?.minus()?),
             ParseExprNode::Mul(s) => self.execute(&s[0])?.mul(self.execute(&s[1])?),
             ParseExprNode::Div(s) => self.execute(&s[0])?.div(self.execute(&s[1])?),
@@ -55,12 +64,6 @@ impl Environment {
             ParseExprNode::Lt(s) => Ok(Val::Bool(self.execute(&s[0])? < self.execute(&s[1])?)),
             ParseExprNode::Gtoe(s) => Ok(Val::Bool(self.execute(&s[0])? >= self.execute(&s[1])?)),
             ParseExprNode::Ltoe(s) => Ok(Val::Bool(self.execute(&s[0])? <= self.execute(&s[1])?)),
-            ParseExprNode::VecAccess(_, _) => todo!(),
-            ParseExprNode::Vector(v) => Ok(Val::Vec(
-                v.into_iter()
-                    .map(|n| self.execute(n))
-                    .collect::<Result<Vec<_>, _>>()?,
-            )),
         }
     }
 }

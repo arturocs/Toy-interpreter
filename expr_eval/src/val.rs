@@ -133,9 +133,35 @@ impl Val {
         }
     }
 
-    pub fn index(&self, i: usize) -> Result<&Self, Error> {
+    pub fn index(&self, i: Val) -> Result<Self, Error> {
         match self {
-            Val::Vec(v) => Ok(&v[i]),
+            Val::Vec(v) => match i {
+                Val::Number(n) => {
+                    if n.fract() == 0.0 {
+                        Ok(v[n as usize].clone())
+                    } else {
+                        Err("Cant index with a floating point number")
+                    }
+                }
+                _ => Err("Index must be a number"),
+            },
+            _ => Err("Index operator can only be applied to vectors"),
+        }
+    }
+
+    pub fn write_to_vec(self, i: Val, value: Val) -> Result<Self, Error> {
+        match self {
+            Val::Vec(mut v) => match i {
+                Val::Number(n) => {
+                    if n.fract() == 0.0 {
+                        v[n as usize] = value;
+                        Ok(Val::Vec(v))
+                    } else {
+                        Err("Cant index with a floating point number")
+                    }
+                }
+                _ => Err("Index must be a number"),
+            },
             _ => Err("Index operator can only be applied to vectors"),
         }
     }

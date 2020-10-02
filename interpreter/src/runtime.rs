@@ -1,12 +1,12 @@
 use crate::parser::ParseNode;
 
-use expr_eval::{self, evaluator, val::Val};
+use expr_eval::{self, evaluator::Environment, parser::ParseExprNode, val::Val};
 
 fn execute_if(
     expr: &expr_eval::parser::ParseExprNode,
     if_block: &[ParseNode],
     else_block: &Option<Vec<ParseNode>>,
-    env: &mut evaluator::Environment,
+    env: &mut Environment,
 ) -> Result<(), &'static str> {
     match env.execute(&expr) {
         Ok(Val::Bool(true)) => execute(if_block, env),
@@ -22,7 +22,7 @@ fn execute_while(
     expr: &expr_eval::parser::ParseExprNode,
 
     block: &[ParseNode],
-    env: &mut evaluator::Environment,
+    env: &mut Environment,
 ) -> Result<(), &'static str> {
     while env.execute(&expr)? == Val::Bool(true) {
         execute(block, env)?
@@ -33,7 +33,7 @@ fn execute_while(
 fn execute_assignation(
     variable: &str,
     value: &expr_eval::parser::ParseExprNode,
-    env: &mut evaluator::Environment,
+    env: &mut Environment,
 ) -> Result<(), &'static str> {
     let computed_value = env.execute(&value)?;
     let varname = variable.to_owned();
@@ -41,10 +41,7 @@ fn execute_assignation(
     Ok(())
 }
 
-fn execute_print(
-    expression: &ParseNode,
-    env: &mut evaluator::Environment,
-) -> Result<(), &'static str> {
+fn execute_print(expression: &ParseNode, env: &mut Environment) -> Result<(), &'static str> {
     match expression {
         ParseNode::Expression(expr) => {
             println!("{}", env.execute(expr)?);
@@ -54,18 +51,27 @@ fn execute_print(
     }
 }
 
-fn execute_expression(
-    expr: &expr_eval::parser::ParseExprNode,
-    env: &mut evaluator::Environment,
-) -> Result<(), &'static str> {
+fn execute_expression(expr: &ParseExprNode, env: &mut Environment) -> Result<(), &'static str> {
     env.execute(&expr)?;
     Ok(())
 }
 
-pub fn execute(
-    ast: &[ParseNode],
-    mut env: &mut evaluator::Environment,
+fn execute_vector_write(
+    name: &str,
+    index: &ParseExprNode,
+    value: ParseExprNode,
+    env: &mut Environment,
 ) -> Result<(), &'static str> {
+    let computed_value = env.execute(&value)?;
+    let computed_index = env.execute(&index)?;
+    let a = env
+        .get_move(name)?
+        .write_to_vec(computed_index, computed_value)?;
+    env.insert(name.to_string(), a);
+    Ok(())
+}
+
+pub fn execute(ast: &[ParseNode], mut env: &mut Environment) -> Result<(), &'static str> {
     let mut i: usize = 0;
     let mut error = "";
     while i < ast.len() {
@@ -84,15 +90,14 @@ pub fn execute(
                     break;
                 }
             },
-            ParseNode::Assignation(variable, value) => match value.as_ref() {
-                ParseNode::Expression(e) => execute_assignation(variable, e, &mut env)?,
-                _ => {
-                    error = "Error parsing assignation expression";
-                    break;
-                }
-            },
+            ParseNode::Assignation(variable, value) => {
+                execute_assignation(variable, &value, &mut env)?
+            }
             ParseNode::Expression(expr) => execute_expression(expr, env)?,
             ParseNode::Print(expression) => execute_print(expression, env)?,
+            ParseNode::VecWrite(name, index, value) => {
+                execute_vector_write(name, index, *value.clone(), env)?
+            }
         }
         i += 1;
     }

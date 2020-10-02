@@ -33,18 +33,18 @@ pub enum ExprToken {
 
 fn check_remaining_cases(capture: &str) -> Result<ExprToken, &'static str> {
     lazy_static! {
-        static ref VAR_REGEX: Regex = Regex::new(r"[^\{\}\n=\(\)]").unwrap();
-        static ref VEC_ACCESS_REGEX: Regex = Regex::new(r"\w+[").unwrap();
+        static ref VAR_REGEX: Regex = Regex::new(r"[^\{\}\n=\(\)\[\]]").unwrap();
+        static ref VEC_ACCESS_REGEX: Regex = Regex::new(r"\w+\[").unwrap();
     }
     let is_f64 = capture.parse::<f64>();
-    if is_f64.is_ok() {
-        Ok(ExprToken::Number(is_f64.unwrap()))
+    if let Ok(n) = is_f64 {
+        Ok(ExprToken::Number(n))
     } else if capture.starts_with('"') && capture.ends_with('"') {
         Ok(ExprToken::String(capture.to_owned()))
-    } else if VAR_REGEX.is_match(capture) {
-        Ok(ExprToken::VarName(capture.to_owned()))
     } else if VEC_ACCESS_REGEX.is_match(capture) {
         Ok(ExprToken::VecAccessStart(capture.to_owned()))
+    } else if VAR_REGEX.is_match(capture) {
+        Ok(ExprToken::VarName(capture.to_owned()))
     } else {
         Err("Unable to match expression")
     }
@@ -58,7 +58,7 @@ pub fn tokenize_expr(expr: &str) -> Result<Vec<ExprToken>, &'static str> {
             r"\s*true\s*|\s*true\s*", //Bool
             r"[^\w\d]null[^\w\d]",  //Null
             //r"[^\{\}\n=]\(",        //Starting part of a function call
-            r"\w+\[",        //Starting part of a vector access
+            r"[[:alpha:]]+\[",        //Starting part of a vector access
             //r"\."                   //Dot operator
             r"\(|\)",          // Parentheses
             r"\[|\]",          //Square brackets
@@ -77,7 +77,7 @@ pub fn tokenize_expr(expr: &str) -> Result<Vec<ExprToken>, &'static str> {
             r"\|\|",             //Logical or operator
             r",",             //Comma operator
             r#""[^"\n]*""#,                //String
-            r"[^\{\}\n=\(\)]", //Variable
+            r"[^\{\}\n=\(\)\[\]]", //Variable
         ]
         .join("|");
         static ref EXPR_REGEX: Regex = Regex::new(&PATTERNS).unwrap();

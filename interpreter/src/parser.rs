@@ -1,13 +1,14 @@
 use crate::tokenizer::*;
-use expr_eval;
+use expr_eval::{parser::parse_expr, parser::ParseExprNode, tokenizer::tokenize_expr};
 type Error = &'static str;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ParseNode {
     If(Box<ParseNode>, Vec<ParseNode>, Option<Vec<ParseNode>>), //If(Expression, If block, Else Block)
     While(Box<ParseNode>, Vec<ParseNode>),                      // While(Condition, Block)
-    Assignation(String, Box<ParseNode>),
-    Expression(expr_eval::parser::ParseExprNode),
+    Assignation(String, Box<ParseExprNode>),
+    VecWrite(String, Box<ParseExprNode>, Box<ParseExprNode>), //Name of the vector, index, value to write
+    Expression(ParseExprNode),
     Print(Box<ParseNode>),
 }
 
@@ -38,7 +39,7 @@ fn find_matching_bracket(tokens: &[Token]) -> Result<usize, Error> {
     check_result(index > 0, index, "Unable to find matching bracket")
 }
 
-fn parse_if<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode, Error> {
+fn parse_if(tokens: &[Token], i: &mut usize) -> Result<ParseNode, Error> {
     *i += 1;
     match tokens[*i] {
         Token::Expression(exp) => match tokens[*i + 1] {
@@ -63,7 +64,7 @@ fn parse_if<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode, Error> 
     }
 }
 
-fn parse_print<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode, Error> {
+fn parse_print(tokens: &[Token], i: &mut usize) -> Result<ParseNode, Error> {
     *i += 1;
     match tokens[*i] {
         Token::Expression(e) => Ok(ParseNode::Print(parse_expression(e)?)),
@@ -71,7 +72,7 @@ fn parse_print<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode, Erro
     }
 }
 
-fn parse_while<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode, Error> {
+fn parse_while(tokens: &[Token], i: &mut usize) -> Result<ParseNode, Error> {
     *i += 1;
     match tokens[*i] {
         Token::Expression(exp) => match tokens[*i + 1] {
@@ -91,22 +92,27 @@ fn parse_while<'a>(tokens: &'a [Token], i: &mut usize) -> Result<ParseNode, Erro
 fn parse_assignation(assignation_str: &str) -> Result<ParseNode, Error> {
     let mut assignation = assignation_str.split('=').map(str::trim);
     let err = "Error parsing asignation";
-    Ok(ParseNode::Assignation(
-        assignation.next().ok_or(err)?.to_owned(),
-        parse_expression(assignation.next().ok_or(err)?)?,
-    ))
+    let dest = assignation.next().ok_or(err)?;
+    let src = Box::new(parse_expr(&tokenize_expr(assignation.next().ok_or(err)?)?)?);
+    if dest.contains('[') && dest.contains(']') {
+        let ast = parse_expr(&tokenize_expr(dest)?)?;
+        match ast {
+            ParseExprNode::VecAccess(name, index) => Ok(ParseNode::VecWrite(name, index, src)),
+            _ => Err("Failed to parse vector write"),
+        }
+    } else {
+        Ok(ParseNode::Assignation(dest.to_owned(), src))
+    }
 }
 
-fn parse_expression<'a>(expression: &'a str) -> Result<Box<ParseNode>, Error> {
-    let mut expr_tokens = expr_eval::tokenizer::tokenize_expr(expression)?;
-   // dbg!(&expr_tokens);
-    let processed_tokens = expr_eval::exprtoken_processor::process_expr_tokens(&mut expr_tokens)?;
-    //dbg!(&processed_tokens);
-    let expr_ast = expr_eval::parser::parse_expr(&processed_tokens)?;
+fn parse_expression(expression: &str) -> Result<Box<ParseNode>, Error> {
+    let expr_tokens = tokenize_expr(expression)?;
+    // dbg!(&expr_tokens);
+    let expr_ast = parse_expr(&expr_tokens)?;
     Ok(Box::new(ParseNode::Expression(expr_ast)))
 }
 
-pub fn parse<'a>(tokens: &'a [Token]) -> Result<Vec<ParseNode>, Error> {
+pub fn parse(tokens: &[Token]) -> Result<Vec<ParseNode>, Error> {
     let mut ast = vec![];
     let mut error = "";
     let mut i: usize = 0;

@@ -18,5 +18,11 @@ lto = true
 codegen-units = 1
 panic = "abort"
 
+[profile.bench]
+debug = true
+lto = true
+codegen-units = 1
+panic = "abort"
+
 [workspace]
 members = ["bench", "expr_eval", "interpreter"]

@@ -15,4 +15,3 @@ expr_eval = {path = "../expr_eval" }
 name = "interpreter"
 harness = false
 path = "src/bench.rs"
-
