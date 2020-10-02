@@ -100,9 +100,9 @@ fn parse_assignation(assignation_str: &str) -> Result<ParseNode, Error> {
 fn parse_expression<'a>(expression: &'a str) -> Result<Box<ParseNode>, Error> {
     let mut expr_tokens = expr_eval::tokenizer::tokenize_expr(expression)?;
    // dbg!(&expr_tokens);
-    let processed_tokens = expr_eval::parser::process_expr_tokens(&mut expr_tokens)?;
+    let processed_tokens = expr_eval::exprtoken_processor::process_expr_tokens(&mut expr_tokens)?;
     //dbg!(&processed_tokens);
-    let expr_ast = expr_eval::parser::parse(&processed_tokens)?;
+    let expr_ast = expr_eval::parser::parse_expr(&processed_tokens)?;
     Ok(Box::new(ParseNode::Expression(expr_ast)))
 }
 
