@@ -1,4 +1,1 @@
 print "Hello world"
-a = [0,0,0]
-a[1+1] = 2
-print a[2]
