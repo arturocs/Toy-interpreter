@@ -72,22 +72,16 @@ fn execute_vector_write(
 
 pub fn execute(ast: &[ParseNode], mut env: &mut Environment) -> Result<(), &'static str> {
     let mut i: usize = 0;
-    let mut error = "";
+
     while i < ast.len() {
         match &ast[i] {
             ParseNode::If(expr, if_block, else_block) => match expr.as_ref() {
                 ParseNode::Expression(e) => execute_if(e, if_block, else_block, env)?,
-                _ => {
-                    error = "Error parsing if expression";
-                    break;
-                }
+                _ => return Err("Error parsing if expression"),
             },
             ParseNode::While(expr, block) => match expr.as_ref() {
                 ParseNode::Expression(e) => execute_while(e, block, env)?,
-                _ => {
-                    error = "Error parsing while expression";
-                    break;
-                }
+                _ => return Err("Error parsing while expression"),
             },
             ParseNode::Assignation(variable, value) => {
                 execute_assignation(variable, &value, &mut env)?
@@ -100,9 +94,6 @@ pub fn execute(ast: &[ParseNode], mut env: &mut Environment) -> Result<(), &'sta
         }
         i += 1;
     }
-    if error == "" {
-        Ok(())
-    } else {
-        Err(error)
-    }
+
+    Ok(())
 }

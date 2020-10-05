@@ -12,31 +12,21 @@ pub enum ParseNode {
     Print(Box<ParseNode>),
 }
 
-fn check_result<T>(condition: bool, result: T, error: Error) -> Result<T, Error> {
-    if condition {
-        Ok(result)
-    } else {
-        Err(error)
-    }
-}
-
 fn find_matching_bracket(tokens: &[Token]) -> Result<usize, Error> {
     let mut nested_brackets = -1;
-    let mut index = 0;
     for (i, token) in tokens.iter().enumerate() {
         match token {
             Token::OpenCBrackets => nested_brackets += 1,
             Token::CloseCBrackets => {
                 nested_brackets -= 1;
                 if nested_brackets < 0 {
-                    index = i;
-                    break;
+                    return Ok(i);
                 }
             }
             _ => {}
         }
     }
-    check_result(index > 0, index, "Unable to find matching bracket")
+    Err("Unable to find matching bracket")
 }
 
 fn parse_if(tokens: &[Token], i: &mut usize) -> Result<ParseNode, Error> {
@@ -114,20 +104,19 @@ fn parse_expression(expression: &str) -> Result<Box<ParseNode>, Error> {
 
 pub fn parse(tokens: &[Token]) -> Result<Vec<ParseNode>, Error> {
     let mut ast = vec![];
-    let mut error = "";
     let mut i: usize = 0;
     while i < tokens.len() {
         match tokens[i] {
             Token::If => ast.push(parse_if(&tokens, &mut i)?),
-            Token::Else => error = "Unmatched else",
+            Token::Else => return Err("Unmatched else"),
             Token::While => ast.push(parse_while(&tokens, &mut i)?),
             Token::Assignation(a) => ast.push(parse_assignation(a)?),
-            Token::OpenCBrackets => error = "Unmatched {",
-            Token::CloseCBrackets => error = "Unmatched }",
+            Token::OpenCBrackets => return Err("Unmatched {"),
+            Token::CloseCBrackets => return Err("Unmatched }"),
             Token::Expression(exp) => ast.push(*parse_expression(exp)?),
             Token::Print => ast.push(parse_print(&tokens, &mut i)?),
         }
         i += 1;
     }
-    check_result(error == "", ast, error)
+    Ok(ast)
 }

@@ -38,54 +38,39 @@ pub enum ProcessedExprToken {
 
 fn find_matching_parentheses(i: usize, tokens: &[ExprToken]) -> Result<usize, Error> {
     let mut nested_parentheses = -1;
-    let mut last_parentheses = 0;
-    let mut found = false;
+
     for (index, token) in tokens.iter().enumerate().skip(i + 1) {
         match token {
             ExprToken::CloseParentheses => {
                 nested_parentheses += 1;
                 if nested_parentheses == 0 {
-                    last_parentheses = index;
-                    found = true;
-                    break;
+                    return Ok(index);
                 }
             }
             ExprToken::OpenParentheses => nested_parentheses -= 1,
             _ => {}
         }
     }
-    if found {
-        Ok(last_parentheses)
-    } else {
-        Err("Unable to find matching parentheses")
-    }
+    Err("Unable to find matching parentheses")
 }
 
 fn find_matching_square_bracket(i: usize, tokens: &[ExprToken]) -> Result<usize, Error> {
     let mut nested_bracket = -1;
-    let mut last_bracket = 0;
-    let mut found = false;
+
     for (index, token) in tokens.iter().enumerate().skip(i + 1) {
-        // dbg!(index);
-        // dbg!(&tokens[index]);
         match token {
             ExprToken::CloseSBrackets => {
                 nested_bracket += 1;
                 if nested_bracket == 0 {
-                    last_bracket = index;
-                    found = true;
-                    break;
+                    return Ok(index);
                 }
             }
             ExprToken::OpenSBrackets => nested_bracket -= 1,
             _ => {}
         }
     }
-    if found {
-        Ok(last_bracket)
-    } else {
-        Err("Unable to find matching square bracket")
-    }
+
+    Err("Unable to find matching square bracket")
 }
 
 fn process_vector<'a>(tokens: &'a [ExprToken], i: &mut usize) -> Result<ProcessedExprToken, Error> {
@@ -167,7 +152,6 @@ fn process_not_and_negatives(tokens: &[ProcessedExprToken]) -> Vec<ProcessedExpr
 pub fn process_expr_tokens(tokens: &[ExprToken]) -> Result<Vec<ProcessedExprToken>, Error> {
     let mut processed_tokens = Vec::with_capacity(tokens.len());
     let mut index = 0;
-    let mut error = "";
     //dbg!(&tokens);
     while index < tokens.len() {
         match &tokens[index] {
@@ -180,10 +164,7 @@ pub fn process_expr_tokens(tokens: &[ExprToken]) -> Result<Vec<ProcessedExprToke
             ExprToken::OpenParentheses => {
                 processed_tokens.push(process_parentheses(tokens, &mut index)?)
             }
-            ExprToken::CloseParentheses => {
-                error = "Unmatched )";
-                break;
-            }
+            ExprToken::CloseParentheses => return Err("Unmatched )"),
             ExprToken::Div => processed_tokens.push(ProcessedExprToken::Div),
             ExprToken::Mul => processed_tokens.push(ProcessedExprToken::Mul),
             ExprToken::Rem => processed_tokens.push(ProcessedExprToken::Rem),
@@ -202,19 +183,13 @@ pub fn process_expr_tokens(tokens: &[ExprToken]) -> Result<Vec<ProcessedExprToke
                 processed_tokens.push(process_vector_access(tokens, &mut index, name)?)
             }
             ExprToken::OpenSBrackets => processed_tokens.push(process_vector(tokens, &mut index)?),
-            ExprToken::CloseSBrackets => {
-                error = "Unmatched ]";
-                break;
-            }
+            ExprToken::CloseSBrackets => return Err("Unmatched ]"),
             ExprToken::Comma => processed_tokens.push(ProcessedExprToken::Comma),
 
             ExprToken::Null => processed_tokens.push(ProcessedExprToken::Null),
         }
         index += 1;
     }
-    if error == "" {
-        Ok(process_not_and_negatives(&processed_tokens))
-    } else {
-        Err(error)
-    }
+
+    Ok(process_not_and_negatives(&processed_tokens))
 }
