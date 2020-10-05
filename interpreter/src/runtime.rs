@@ -64,10 +64,9 @@ fn execute_vector_write(
 ) -> Result<(), &'static str> {
     let computed_value = env.execute(&value)?;
     let computed_index = env.execute(&index)?;
-    let a = env
-        .get_move(name)?
+    env.get_ref(name)?
         .write_to_vec(computed_index, computed_value)?;
-    env.insert(name.to_string(), a);
+    // env.insert(name.to_string(), a);
     Ok(())
 }
 
