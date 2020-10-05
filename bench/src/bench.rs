@@ -77,11 +77,29 @@ while a < b {
     });
 }
 
+pub fn criterion_benchmark5(c: &mut Criterion) {
+    let tokens = tokenize(
+        r#"a=0
+b=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+while a < 20 {
+   b[a]=a
+   a = a + 1
+}
+"#,
+    );
+    let mut env = Environment::new();
+    let ast = parse(&tokens).unwrap();
+    c.bench_function("vector_write", |b| {
+        b.iter(|| execute(black_box(&ast), &mut env))
+    });
+}
+
 criterion_group!(
     benches,
     criterion_benchmark1,
     criterion_benchmark2,
     criterion_benchmark3,
     criterion_benchmark4,
+    criterion_benchmark5,
 );
 criterion_main!(benches);
