@@ -35,9 +35,9 @@ pub fn tokenize(source_code: &str) -> Vec<Token> {
         //.unicode(false)
         .build()
         .unwrap()
-        .captures_iter(source_code)
-        .map(|cap| cap.get(0).unwrap().as_str().trim())
-        .filter(|s| s != &"")
+        .find_iter(source_code)
+        .map(|m| source_code[m.start()..m.end()].trim())
+        .filter(|&s| s != "")
         .map(|cap| match cap.trim() {
             "if" => Token::If,
             "else" => Token::Else,

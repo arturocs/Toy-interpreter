@@ -36,8 +36,7 @@ fn check_remaining_cases(capture: &str) -> Result<ExprToken, &'static str> {
         static ref VAR_REGEX: Regex = Regex::new(r"[^\{\}\n=\(\)\[\]]").unwrap();
         static ref VEC_ACCESS_REGEX: Regex = Regex::new(r"\w+\[").unwrap();
     }
-    let is_f64 = capture.parse::<f64>();
-    if let Ok(n) = is_f64 {
+    if let Ok(n) = capture.parse::<f64>() {
         Ok(ExprToken::Number(n))
     } else if capture.starts_with('"') && capture.ends_with('"') {
         Ok(ExprToken::String(capture.to_owned()))
@@ -83,9 +82,9 @@ pub fn tokenize_expr(expr: &str) -> Result<Vec<ExprToken>, &'static str> {
         static ref EXPR_REGEX: Regex = Regex::new(&PATTERNS).unwrap();
     }
     EXPR_REGEX
-        .captures_iter(expr)
-        .map(|cap| cap.get(0).unwrap().as_str().trim())
-        .filter(|s| s != &"")
+        .find_iter(expr)
+        .map(|m| expr[m.start()..m.end()].trim())
+        .filter(|&s| s != "")
         .map(|capture| match capture {
             "true" => Ok(ExprToken::Bool(true)),
             "false" => Ok(ExprToken::Bool(false)),
