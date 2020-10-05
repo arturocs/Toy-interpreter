@@ -138,9 +138,13 @@ impl Val {
             Val::Vec(v) => match i {
                 Val::Number(n) => {
                     if n.fract() == 0.0 {
-                        Ok(v[n as usize].clone())
+                        if v.len() > n as usize {
+                            Ok(v[n as usize].clone())
+                        } else {
+                            Err("Vector access out of bounds")
+                        }
                     } else {
-                        Err("Cant index with a floating point number")
+                        Err("Can't index with a floating point number")
                     }
                 }
                 _ => Err("Index must be a number"),
@@ -149,15 +153,20 @@ impl Val {
         }
     }
 
-    pub fn write_to_vec(self, i: Val, value: Val) -> Result<Self, Error> {
+    pub fn write_to_vec(&mut self, i: Val, value: Val) -> Result<(), Error> {
         match self {
-            Val::Vec(mut v) => match i {
+            Val::Vec(v) => match i {
                 Val::Number(n) => {
                     if n.fract() == 0.0 {
-                        v[n as usize] = value;
-                        Ok(Val::Vec(v))
+                        if v.len() > n as usize {
+                            v[n as usize] = value;
+                            Ok(())
+                        // Ok(Val::Vec(v))
+                        } else {
+                            Err("Vector access out of bounds")
+                        }
                     } else {
-                        Err("Cant index with a floating point number")
+                        Err("Can't index with a floating point number")
                     }
                 }
                 _ => Err("Index must be a number"),
@@ -188,10 +197,10 @@ impl Val {
             _ => Err("push() can only be used on vectors"),
         }
     }
-    pub fn pop(mut self) -> Result<(Val, Val), Error> {
+    pub fn pop(&mut self) -> Result<Val, Error> {
         match self {
             Val::Vec(ref mut v) => match v.pop() {
-                Some(e) => Ok((e, self)),
+                Some(e) => Ok(e),
                 None => Err("The vector is empty"),
             },
             _ => Err("pop() can only be used on vectors"),
