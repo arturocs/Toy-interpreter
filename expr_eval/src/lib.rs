@@ -17,7 +17,7 @@ mod tests {
         let ast = parse_expr(&tokens).unwrap();
         //dbg!(&ast);
         let mut env = Environment::new();
-        let result = env.execute(&ast).unwrap();
+        let result = env.evaluate(&ast).unwrap();
         assert_eq!(Val::Number(4.0 / 2.0 + 2.0), result);
     }
 
@@ -28,7 +28,7 @@ mod tests {
         let ast = parse_expr(&tokens).unwrap();
         //dbg!(&ast);
         let mut env = Environment::new();
-        let result = env.execute(&ast).unwrap();
+        let result = env.evaluate(&ast).unwrap();
         assert_eq!(Val::Bool(true), result);
     }
 
@@ -38,7 +38,7 @@ mod tests {
         let ast = parse_expr(&tokens).unwrap();
         // dbg!(&ast);
         let mut env = Environment::new();
-        let result = env.execute(&ast).unwrap();
+        let result = env.evaluate(&ast).unwrap();
         assert_eq!(Val::Bool(4 == 2), result);
     }
     #[test]
@@ -47,7 +47,7 @@ mod tests {
         let ast = parse_expr(&tokens).unwrap();
         // dbg!(&ast);
         let mut env = Environment::new();
-        let result = env.execute(&ast).unwrap();
+        let result = env.evaluate(&ast).unwrap();
         assert_eq!(Val::Bool(4 + 1 >= 5 && 2 < 3), result);
     }
 
@@ -57,7 +57,7 @@ mod tests {
         let ast = parse_expr(&tokens).unwrap();
         //dbg!(&ast);
         let mut env = Environment::new();
-        let result = env.execute(&ast).unwrap();
+        let result = env.evaluate(&ast).unwrap();
         assert_eq!(Val::Number(2.0 * 3.0 + 4.0 * 5.0), result);
     }
 
@@ -67,7 +67,7 @@ mod tests {
         let ast = parse_expr(&tokens).unwrap();
         //dbg!(&ast);
         let mut env = Environment::new();
-        let result = env.execute(&ast).unwrap();
+        let result = env.evaluate(&ast).unwrap();
         assert_eq!(Val::Number(-2.0 + 1.0), result);
     }
 
@@ -77,7 +77,7 @@ mod tests {
         let ast = parse_expr(&tokens).unwrap();
         //dbg!(&ast);
         let mut env = Environment::new();
-        let result = env.execute(&ast).unwrap();
+        let result = env.evaluate(&ast).unwrap();
         assert_eq!(Val::Number(2.0 - 1.0), result);
     }
 
@@ -87,7 +87,7 @@ mod tests {
         let ast = parse_expr(&tokens).unwrap();
         //dbg!(&ast);
         let mut env = Environment::new();
-        let result = env.execute(&ast).unwrap();
+        let result = env.evaluate(&ast).unwrap();
         assert_eq!(Val::Number((2.0 * 3.0) + (4.0 * 5.0)), result);
     }
 
@@ -98,7 +98,7 @@ mod tests {
         let ast = parse_expr(&tokens).unwrap();
         // dbg!(&ast);
         let mut env = Environment::new();
-        let result = env.execute(&ast).unwrap();
+        let result = env.evaluate(&ast).unwrap();
         assert_eq!(
             Val::Number(((1.0 + 2.0) * 3.0 / (5.0 * (3.0 + 1.0)))),
             result
@@ -109,7 +109,7 @@ mod tests {
         let tokens = tokenize_expr("0*1+2*3*4+5+6").unwrap();
         let ast = parse_expr(&tokens).unwrap();
         let mut env = Environment::new();
-        let result = env.execute(&ast).unwrap();
+        let result = env.evaluate(&ast).unwrap();
         assert_eq!(Val::Number(0.0 * 1.0 + 2.0 * 3.0 * 4.0 + 5.0 + 6.0), result);
     }
 
@@ -119,7 +119,7 @@ mod tests {
         let ast = parse_expr(&tokens).unwrap();
         //dbg!(&ast);
         let mut env = Environment::new();
-        let result = env.execute(&ast).unwrap();
+        let result = env.evaluate(&ast).unwrap();
         assert_eq!(Val::Number(3.0 + 4.0 / 5.0), result);
     }
 
@@ -129,7 +129,7 @@ mod tests {
         let ast = parse_expr(&tokens).unwrap();
         //dbg!(&ast);
         let mut env = Environment::new();
-        let result = env.execute(&ast).unwrap();
+        let result = env.evaluate(&ast).unwrap();
         assert_eq!(Val::Number((3.0 + 4.0) / 5.0), result);
     }
 }

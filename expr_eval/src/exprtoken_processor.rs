@@ -10,7 +10,7 @@ pub enum ProcessedExprToken {
     Null,
     //FnCall(&'a str, Vec<ProcessedToken<'a>>),
     //Dot
-    VecAccess(String, Vec<ProcessedExprToken>),
+    VecAccess(String, Vec<Vec<ProcessedExprToken>>),
     Vector(Vec<ProcessedExprToken>),
     OpenSBrackets,
     CloseSBrackets,
@@ -59,7 +59,7 @@ fn find_matching_square_bracket(i: usize, tokens: &[ExprToken]) -> Result<usize,
 
     for (index, token) in tokens.iter().enumerate().skip(i + 1) {
         match token {
-            ExprToken::CloseSBrackets => {
+            ExprToken::CloseSBrackets | ExprToken::VecAccessStart(_) => {
                 nested_bracket += 1;
                 if nested_bracket == 0 {
                     return Ok(index);
@@ -91,14 +91,30 @@ fn process_vector_access(
     capture: &str,
 ) -> Result<ProcessedExprToken, Error> {
     let bracket_end = find_matching_square_bracket(*i, tokens)?;
-    let parentheses_content = &tokens[*i + 1..bracket_end];
     let name = capture.trim_end_matches('[').to_string();
-    *i = bracket_end;
-
-    Ok(ProcessedExprToken::VecAccess(
-        name,
-        process_expr_tokens(parentheses_content)?,
-    ))
+    match tokens[bracket_end] {
+        ExprToken::VecAccessStart(_) => {
+            let mut v = Vec::with_capacity(5);
+            //Do while loop
+            while {
+                let a = find_matching_square_bracket(*i, tokens);
+                let brackets_content = &tokens[*i + 1..a?];
+                v.push(process_expr_tokens(brackets_content)?);
+                *i = a?;
+                a.is_ok()
+            } {}
+            Ok(ProcessedExprToken::VecAccess(name, v))
+        }
+        ExprToken::CloseSBrackets => {
+            let brackets_content = &tokens[*i + 1..bracket_end];
+            *i = bracket_end;
+            Ok(ProcessedExprToken::VecAccess(
+                name,
+                vec![process_expr_tokens(brackets_content)?],
+            ))
+        }
+        _ => Err("Erro preprocessing vector access"),
+    }
 }
 
 fn process_parentheses(tokens: &[ExprToken], i: &mut usize) -> Result<ProcessedExprToken, Error> {
@@ -152,7 +168,6 @@ fn process_not_and_negatives(tokens: &[ProcessedExprToken]) -> Vec<ProcessedExpr
 pub fn process_expr_tokens(tokens: &[ExprToken]) -> Result<Vec<ProcessedExprToken>, Error> {
     let mut processed_tokens = Vec::with_capacity(tokens.len());
     let mut index = 0;
-    //dbg!(&tokens);
     while index < tokens.len() {
         match &tokens[index] {
             ExprToken::VarName(a) => processed_tokens.push(ProcessedExprToken::VarName(a.clone())),

@@ -34,7 +34,7 @@ pub enum ExprToken {
 fn check_remaining_cases(capture: &str) -> Result<ExprToken, &'static str> {
     lazy_static! {
         static ref VAR_REGEX: Regex = Regex::new(r"[^\{\}\n=\(\)\[\]]").unwrap();
-        static ref VEC_ACCESS_REGEX: Regex = Regex::new(r"\w+\[").unwrap();
+        static ref VEC_ACCESS_REGEX: Regex = Regex::new(r"([[:alpha:]]|\])+\[").unwrap();
     }
     if let Ok(n) = capture.parse::<f64>() {
         Ok(ExprToken::Number(n))
@@ -57,7 +57,7 @@ pub fn tokenize_expr(expr: &str) -> Result<Vec<ExprToken>, &'static str> {
             r"\s*true\s*|\s*true\s*", //Bool
             r"[^\w\d]null[^\w\d]",  //Null
             //r"[^\{\}\n=]\(",        //Starting part of a function call
-            r"[[:alpha:]]+\[",        //Starting part of a vector access
+            r"([[:alpha:]]|\])+\[",        //Starting part of a vector access
             //r"\."                   //Dot operator
             r"\(|\)",          // Parentheses
             r"\[|\]",          //Square brackets

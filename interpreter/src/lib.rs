@@ -23,7 +23,7 @@ mod tests {
         //dbg!(&instructions);
         let ast = parse(&instructions).unwrap();
         runtime::execute(&ast, &mut env).unwrap();
-        assert_eq!(env.get_ref("a").cloned(), Ok(Val::Number(10.0)));
+        assert_eq!(env.get_mut_ref("a").cloned(), Ok(Val::Number(10.0)));
     }
 
     #[test]
@@ -36,7 +36,7 @@ mod tests {
         //dbg!(&ast);
         runtime::execute(&ast, &mut env).unwrap();
         assert_eq!(
-            env.get_ref("a").cloned(),
+            env.get_mut_ref("a").cloned(),
             Ok(Val::Vec(vec![
                 Val::Number(3.0),
                 Val::Number(12.0),
@@ -58,7 +58,7 @@ mod tests {
         let ast = parse(&instructions).unwrap();
         //dbg!(&ast);
         runtime::execute(&ast, &mut env).unwrap();
-        assert_eq!(env.get_ref("b").cloned(), Ok(Val::Number(2.0)));
+        assert_eq!(env.get_mut_ref("b").cloned(), Ok(Val::Number(2.0)));
     }
     #[test]
     fn vector_write() {
@@ -77,7 +77,7 @@ mod tests {
         //dbg!(&ast);
         runtime::execute(&ast, &mut env).unwrap();
         assert_eq!(
-            env.get_ref("b").cloned(),
+            env.get_mut_ref("b").cloned(),
             Ok(Val::Vec(vec![
                 Val::Number(0.0),
                 Val::Number(1.0),
@@ -86,20 +86,64 @@ mod tests {
         );
     }
     #[test]
-    fn vector_2d_access() {
+    fn vector_2d_read() {
         let mut env = Environment::new();
         let code = r#"
         a=[[1,2,3],[4,5,6],[7,8,9]]
         b=a[1][1]
         "#;
         let instructions = tokenize(&code);
-         dbg!(&instructions);
+        // dbg!(&instructions);
         let ast = parse(&instructions).unwrap();
-        dbg!(&ast);
+        // dbg!(&ast);
+        runtime::execute(&ast, &mut env).unwrap();
+        assert_eq!(env.get_mut_ref("b").cloned(), Ok(Val::Number(5.0)));
+    }
+    #[test]
+    fn vector_2d_write() {
+        let mut env = Environment::new();
+        let code = r#"
+        a=[[1,2,3],[4,5,6],[7,8,9]]
+        a[1][1]=0
+        "#;
+        let instructions = tokenize(&code);
+        // dbg!(&instructions);
+        let ast = parse(&instructions).unwrap();
+        // dbg!(&ast);
         runtime::execute(&ast, &mut env).unwrap();
         assert_eq!(
-            env.get_ref("b").cloned(),
-            Ok(Val::Number(5.0))
+            env.get_mut_ref("a").cloned(),
+            Ok(Val::Vec(vec![
+                Val::Vec(vec![Val::Number(1.0), Val::Number(2.0), Val::Number(3.0),]),
+                Val::Vec(vec![Val::Number(4.0), Val::Number(0.0), Val::Number(6.0),]),
+                Val::Vec(vec![Val::Number(7.0), Val::Number(8.0), Val::Number(9.0),])
+            ]))
+        );
+    }
+    #[test]
+    fn vector_copy() {
+        let mut env = Environment::new();
+        let code = r#"
+        a=0
+        b=[1,2,3]
+        c=[0,0,0]
+        while a < 3 {
+            c[a]=b[a]
+            a = a + 1
+         }
+        "#;
+        let instructions = tokenize(&code);
+        // dbg!(&instructions);
+        let ast = parse(&instructions).unwrap();
+        // dbg!(&ast);
+        runtime::execute(&ast, &mut env).unwrap();
+        assert_eq!(
+            env.get_mut_ref("c").cloned(),
+            Ok(Val::Vec(vec![
+                Val::Number(1.0),
+                Val::Number(2.0),
+                Val::Number(3.0)
+            ]))
         );
     }
 }

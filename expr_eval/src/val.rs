@@ -133,13 +133,13 @@ impl Val {
         }
     }
 
-    pub fn index(&self, i: Val) -> Result<Self, Error> {
+    pub fn index(&mut self, i: Val) -> Result<&mut Self, Error> {
         match self {
             Val::Vec(v) => match i {
                 Val::Number(n) => {
                     if n.fract() == 0.0 {
                         if v.len() > n as usize {
-                            Ok(v[n as usize].clone())
+                            Ok(&mut v[n as usize])
                         } else {
                             Err("Vector access out of bounds")
                         }
@@ -161,7 +161,6 @@ impl Val {
                         if v.len() > n as usize {
                             v[n as usize] = value;
                             Ok(())
-                        // Ok(Val::Vec(v))
                         } else {
                             Err("Vector access out of bounds")
                         }
