@@ -13,7 +13,7 @@ pub enum ParseExprNode {
     Bool(Val),
     Null,
     //FnCallStart(&'a str),
-    VecAccess(String, Box<ParseExprNode>),
+    VecAccess(String, Vec<ParseExprNode>),
     //Dot
     Vector(Vec<ParseExprNode>),
     Neg(Box<ParseExprNode>),
@@ -43,12 +43,10 @@ fn parse_vector(vector: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
 
 fn parse_vector_read(
     name: &str,
-    index_expr: &[ProcessedExprToken],
+    index_expr: &[Vec<ProcessedExprToken>],
 ) -> Result<ParseExprNode, Error> {
-    Ok(ParseExprNode::VecAccess(
-        name.to_string(),
-        Box::new(parse_and(&index_expr)?),
-    ))
+    let indexes: Result<Vec<_>, _> = index_expr.iter().map(|e| parse_and(e)).collect();
+    Ok(ParseExprNode::VecAccess(name.to_string(), indexes?))
 }
 
 fn neg_to_node(a: &ProcessedExprToken) -> Result<ParseExprNode, Error> {

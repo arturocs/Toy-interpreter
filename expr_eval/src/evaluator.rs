@@ -15,55 +15,58 @@ impl Environment {
             variables: BTreeMap::new(),
         }
     }
-    /*pub(crate) fn with_capacity(capacity: usize) -> Environment {
-        Environment {
-            variables: BTreeMap::with_capacity(capacity),
-        }
-    }*/
+
     pub fn insert(&mut self, variable: String, value: Val) {
         self.variables.insert(variable, value);
     }
 
-    pub fn get_ref(&mut self, key: &str) -> Result<&mut Val, Error> {
+    pub fn get_mut_ref(&mut self, key: &str) -> Result<&mut Val, Error> {
         Ok(self.variables.get_mut(key).ok_or("Undeclared variable")?)
     }
 
-    pub fn get_move(&mut self, key: &str) -> Result<Val, Error> {
-        Ok(self.variables.remove(key).ok_or("Undeclared variable")?)
+    fn execute_vec(&mut self, v: &[ParseExprNode]) -> Result<Val, Error> {
+        Ok(Val::Vec(
+            v.iter()
+                .map(|n| self.evaluate(n))
+                .collect::<Result<Vec<_>, _>>()?,
+        ))
     }
 
-    pub fn execute(&mut self, node: &ParseExprNode) -> Result<Val, Error> {
+    fn execute_vec_access(&mut self, name: &str, index: &[ParseExprNode]) -> Result<Val, Error> {
+        let computed_indexes: Result<Vec<_>, _> = index.iter().map(|n| self.evaluate(n)).collect();
+        let mut a = self.get_mut_ref(name)?;
+        for i in computed_indexes? {
+            a = a.index(i)?
+        }
+        Ok(a.clone())
+    }
+
+    pub fn evaluate(&mut self, node: &ParseExprNode) -> Result<Val, Error> {
         match node {
-            ParseExprNode::VarName(a) => Ok(self.get_ref(a)?.clone()),
+            ParseExprNode::VarName(a) => Ok(self.get_mut_ref(a)?.clone()),
             ParseExprNode::Number(n) => Ok(n.clone()),
             ParseExprNode::String(s) => Ok(s.clone()),
             ParseExprNode::Bool(b) => Ok(b.clone()),
             ParseExprNode::Null => Ok(Val::Null),
-            ParseExprNode::VecAccess(name, index) => {
-                Ok(self.get_ref(name)?.clone().index(self.execute(index)?)?)
-            }
-            ParseExprNode::Vector(v) => Ok(Val::Vec(
-                v.iter()
-                    .map(|n| self.execute(n))
-                    .collect::<Result<Vec<_>, _>>()?,
-            )),
-            ParseExprNode::Neg(n) => Ok(self.execute(&n)?.minus()?),
-            ParseExprNode::Mul(s) => self.execute(&s[0])?.mul(self.execute(&s[1])?),
-            ParseExprNode::Div(s) => self.execute(&s[0])?.div(self.execute(&s[1])?),
-            ParseExprNode::Rem(s) => self.execute(&s[0])?.rem(self.execute(&s[1])?),
-            ParseExprNode::Add(s) => self.execute(&s[0])?.add(self.execute(&s[1])?),
-            ParseExprNode::Sub(s) => self.execute(&s[0])?.sub(self.execute(&s[1])?),
-            ParseExprNode::Eq(s) => Ok(Val::Bool(self.execute(&s[0])?.eq(&self.execute(&s[1])?))),
+            ParseExprNode::VecAccess(name, index) => self.execute_vec_access(name, index),
+            ParseExprNode::Vector(v) => self.execute_vec(v),
+            ParseExprNode::Neg(n) => Ok(self.evaluate(&n)?.minus()?),
+            ParseExprNode::Mul(s) => self.evaluate(&s[0])?.mul(self.evaluate(&s[1])?),
+            ParseExprNode::Div(s) => self.evaluate(&s[0])?.div(self.evaluate(&s[1])?),
+            ParseExprNode::Rem(s) => self.evaluate(&s[0])?.rem(self.evaluate(&s[1])?),
+            ParseExprNode::Add(s) => self.evaluate(&s[0])?.add(self.evaluate(&s[1])?),
+            ParseExprNode::Sub(s) => self.evaluate(&s[0])?.sub(self.evaluate(&s[1])?),
+            ParseExprNode::Eq(s) => Ok(Val::Bool(self.evaluate(&s[0])?.eq(&self.evaluate(&s[1])?))),
             ParseExprNode::NotEq(s) => {
-                Ok(Val::Bool(self.execute(&s[0])?.ne(&self.execute(&s[1])?)))
+                Ok(Val::Bool(self.evaluate(&s[0])?.ne(&self.evaluate(&s[1])?)))
             }
-            ParseExprNode::And(s) => self.execute(&s[0])?.and(self.execute(&s[1])?),
-            ParseExprNode::Or(s) => self.execute(&s[0])?.or(self.execute(&s[1])?),
-            ParseExprNode::Not(b) => Ok(self.execute(&b)?.not()?),
-            ParseExprNode::Gt(s) => Ok(Val::Bool(self.execute(&s[0])? > self.execute(&s[1])?)),
-            ParseExprNode::Lt(s) => Ok(Val::Bool(self.execute(&s[0])? < self.execute(&s[1])?)),
-            ParseExprNode::Gtoe(s) => Ok(Val::Bool(self.execute(&s[0])? >= self.execute(&s[1])?)),
-            ParseExprNode::Ltoe(s) => Ok(Val::Bool(self.execute(&s[0])? <= self.execute(&s[1])?)),
+            ParseExprNode::And(s) => self.evaluate(&s[0])?.and(self.evaluate(&s[1])?),
+            ParseExprNode::Or(s) => self.evaluate(&s[0])?.or(self.evaluate(&s[1])?),
+            ParseExprNode::Not(b) => Ok(self.evaluate(&b)?.not()?),
+            ParseExprNode::Gt(s) => Ok(Val::Bool(self.evaluate(&s[0])? > self.evaluate(&s[1])?)),
+            ParseExprNode::Lt(s) => Ok(Val::Bool(self.evaluate(&s[0])? < self.evaluate(&s[1])?)),
+            ParseExprNode::Gtoe(s) => Ok(Val::Bool(self.evaluate(&s[0])? >= self.evaluate(&s[1])?)),
+            ParseExprNode::Ltoe(s) => Ok(Val::Bool(self.evaluate(&s[0])? <= self.evaluate(&s[1])?)),
         }
     }
 }

@@ -7,7 +7,7 @@ pub enum ParseNode {
     If(Box<ParseNode>, Vec<ParseNode>, Option<Vec<ParseNode>>), //If(Expression, If block, Else Block)
     While(Box<ParseNode>, Vec<ParseNode>),                      // While(Condition, Block)
     Assignation(String, Box<ParseExprNode>),
-    VecWrite(String, Box<ParseExprNode>, Box<ParseExprNode>), //Name of the vector, index, value to write
+    VecWrite(String, Vec<ParseExprNode>, Box<ParseExprNode>), //Name of the vector, index, value to write
     Expression(ParseExprNode),
     Print(Box<ParseNode>),
 }

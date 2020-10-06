@@ -80,16 +80,37 @@ while a < b {
 pub fn criterion_benchmark5(c: &mut Criterion) {
     let tokens = tokenize(
         r#"a=0
-b=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+b=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+c=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 while a < 20 {
-   b[a]=a
+   c[a]=b[a]
    a = a + 1
 }
 "#,
     );
     let mut env = Environment::new();
     let ast = parse(&tokens).unwrap();
-    c.bench_function("vector_write", |b| {
+    c.bench_function("vector_copy", |b| {
+        b.iter(|| execute(black_box(&ast), &mut env))
+    });
+}
+
+pub fn criterion_benchmark6(c: &mut Criterion) {
+    let tokens = tokenize(
+        r#"
+        a=0
+        b=30000
+        c=""
+        while a < b {
+            a = a + 1
+            if a % 5 == 0 {
+                c = c + a + "\n" + "multiple of 5" + "\n"
+            }
+        }"#,
+    );
+    let mut env = Environment::new();
+    let ast = parse(&tokens).unwrap();
+    c.bench_function("string_addition", |b| {
         b.iter(|| execute(black_box(&ast), &mut env))
     });
 }
@@ -101,5 +122,6 @@ criterion_group!(
     criterion_benchmark3,
     criterion_benchmark4,
     criterion_benchmark5,
+    criterion_benchmark6,
 );
 criterion_main!(benches);
