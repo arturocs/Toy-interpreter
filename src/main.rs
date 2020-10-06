@@ -1,7 +1,4 @@
-#![allow(dead_code)]
-#![feature(iterator_fold_self)]
 use std::{env, fs};
-
 use expr_eval::evaluator::Environment;
 use interpreter::{parser::parse, runtime, tokenizer::tokenize};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
