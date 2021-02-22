@@ -1,6 +1,6 @@
-use std::{env, fs};
 use expr_eval::evaluator::Environment;
 use interpreter::{parser::parse, runtime, tokenizer::tokenize};
+use std::{env, fs};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut env = Environment::new();
     let filename = env::args().nth(1).ok_or("Missing argument")?;
