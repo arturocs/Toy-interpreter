@@ -87,6 +87,20 @@ mod tests {
         runtime::execute(&ast, &mut env).unwrap();
         assert_eq!(env.get_ref("b"), Ok(&Val::Number(5.0)));
     }
+
+    #[test]
+    fn vector_3d_read() {
+        let mut env = Environment::new();
+        let code = r#"
+        a=[[[5]]]
+        b=a[0][0][0]
+        "#;
+        let instructions = tokenize(&code);
+        let ast = parse(&instructions).unwrap();
+        runtime::execute(&ast, &mut env).unwrap();
+        assert_eq!(env.get_ref("b"), Ok(&Val::Number(5.0)));
+    }
+
     #[test]
     fn vector_2d_write() {
         let mut env = Environment::new();
