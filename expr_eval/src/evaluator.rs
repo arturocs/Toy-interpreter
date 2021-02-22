@@ -24,6 +24,10 @@ impl Environment {
         Ok(self.variables.get_mut(key).ok_or("Undeclared variable")?)
     }
 
+    pub fn get_ref(&mut self, key: &str) -> Result<&Val, Error> {
+        Ok(self.variables.get(key).ok_or("Undeclared variable")?)
+    }
+
     fn execute_vec(&mut self, v: &[ParseExprNode]) -> Result<Val, Error> {
         Ok(Val::Vec(
             v.iter()
