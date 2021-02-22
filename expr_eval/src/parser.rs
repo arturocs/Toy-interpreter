@@ -74,7 +74,7 @@ fn parse_mul(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Mul)
         .map(|x| parse_final_element(&x[0]))
-        .fold_first(|a, b| Ok(ParseExprNode::Mul(Box::new([a?, b?]))))
+        .reduce(|a, b| Ok(ParseExprNode::Mul(Box::new([a?, b?]))))
         .ok_or("Error parsing multiplication")?
 }
 
@@ -82,7 +82,7 @@ fn parse_div(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Div)
         .map(|x| parse_mul(x))
-        .fold_first(|a, b| Ok(ParseExprNode::Div(Box::new([a?, b?]))))
+        .reduce(|a, b| Ok(ParseExprNode::Div(Box::new([a?, b?]))))
         .ok_or("Error parsing division")?
 }
 
@@ -90,7 +90,7 @@ fn parse_rem(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Rem)
         .map(|x| parse_div(x))
-        .fold_first(|a, b| Ok(ParseExprNode::Rem(Box::new([a?, b?]))))
+        .reduce(|a, b| Ok(ParseExprNode::Rem(Box::new([a?, b?]))))
         .ok_or("Error parsing division")?
 }
 
@@ -98,7 +98,7 @@ fn parse_sub(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Sub)
         .map(|x| parse_rem(x))
-        .fold_first(|a, b| Ok(ParseExprNode::Sub(Box::new([a?, b?]))))
+        .reduce(|a, b| Ok(ParseExprNode::Sub(Box::new([a?, b?]))))
         .ok_or("Error parsing subtraction")?
 }
 
@@ -106,7 +106,7 @@ fn parse_add(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Add)
         .map(|x| parse_sub(x))
-        .fold_first(|a, b| Ok(ParseExprNode::Add(Box::new([a?, b?]))))
+        .reduce(|a, b| Ok(ParseExprNode::Add(Box::new([a?, b?]))))
         .ok_or("Error parsing subtraction")?
 }
 
@@ -114,7 +114,7 @@ fn parse_ltoe(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Ltoe)
         .map(|x| parse_add(x))
-        .fold_first(|a, b| Ok(ParseExprNode::Ltoe(Box::new([a?, b?]))))
+        .reduce(|a, b| Ok(ParseExprNode::Ltoe(Box::new([a?, b?]))))
         .ok_or("Error parsing addition")?
 }
 
@@ -122,7 +122,7 @@ fn parse_lt(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Lt)
         .map(|x| parse_ltoe(x))
-        .fold_first(|a, b| Ok(ParseExprNode::Lt(Box::new([a?, b?]))))
+        .reduce(|a, b| Ok(ParseExprNode::Lt(Box::new([a?, b?]))))
         .ok_or("Error parsing addition")?
 }
 
@@ -130,7 +130,7 @@ fn parse_gtoe(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Gtoe)
         .map(|x| parse_lt(x))
-        .fold_first(|a, b| Ok(ParseExprNode::Gtoe(Box::new([a?, b?]))))
+        .reduce(|a, b| Ok(ParseExprNode::Gtoe(Box::new([a?, b?]))))
         .ok_or("Error parsing addition")?
 }
 
@@ -138,7 +138,7 @@ fn parse_gt(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Gt)
         .map(|x| parse_gtoe(x))
-        .fold_first(|a, b| Ok(ParseExprNode::Gt(Box::new([a?, b?]))))
+        .reduce(|a, b| Ok(ParseExprNode::Gt(Box::new([a?, b?]))))
         .ok_or("Error parsing addition")?
 }
 
@@ -146,7 +146,7 @@ fn parse_noteq(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::NotEq)
         .map(|x| parse_gt(x))
-        .fold_first(|a, b| Ok(ParseExprNode::NotEq(Box::new([a?, b?]))))
+        .reduce(|a, b| Ok(ParseExprNode::NotEq(Box::new([a?, b?]))))
         .ok_or("Error parsing addition")?
 }
 
@@ -154,7 +154,7 @@ fn parse_eq(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Eq)
         .map(|x| parse_noteq(x))
-        .fold_first(|a, b| Ok(ParseExprNode::Eq(Box::new([a?, b?]))))
+        .reduce(|a, b| Ok(ParseExprNode::Eq(Box::new([a?, b?]))))
         .ok_or("Error parsing addition")?
 }
 
@@ -162,7 +162,7 @@ fn parse_or(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::Or)
         .map(|x| parse_eq(x))
-        .fold_first(|a, b| Ok(ParseExprNode::Or(Box::new([a?, b?]))))
+        .reduce(|a, b| Ok(ParseExprNode::Or(Box::new([a?, b?]))))
         .ok_or("Error parsing logical or")?
 }
 
@@ -170,7 +170,7 @@ fn parse_and(tokens: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     tokens
         .split(|x| *x == ProcessedExprToken::And)
         .map(|x| parse_or(x))
-        .fold_first(|a, b| Ok(ParseExprNode::And(Box::new([a?, b?]))))
+        .reduce(|a, b| Ok(ParseExprNode::And(Box::new([a?, b?]))))
         .ok_or("Error parsing logical and")?
 }
 

@@ -1,4 +1,3 @@
-#![feature(iterator_fold_self)]
 #[macro_use]
 extern crate lazy_static;
 pub mod evaluator;
