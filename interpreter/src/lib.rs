@@ -2,8 +2,6 @@
 pub mod parser;
 pub mod runtime;
 pub mod tokenizer;
-#[macro_use]
-extern crate lazy_static;
 
 #[cfg(test)]
 mod tests {

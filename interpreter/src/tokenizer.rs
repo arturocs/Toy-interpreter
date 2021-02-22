@@ -1,5 +1,5 @@
 use regex::{Regex, RegexBuilder};
-
+use lazy_static::lazy_static;
 #[derive(PartialEq, Debug)]
 pub enum Token<'a> {
     If,
