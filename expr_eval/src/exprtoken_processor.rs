@@ -72,7 +72,7 @@ fn find_matching_square_bracket(i: usize, tokens: &[ExprToken]) -> Result<usize,
     Err("Unable to find matching square bracket")
 }
 
-fn process_vector<'a>(tokens: &'a [ExprToken], i: &mut usize) -> Result<ProcessedExprToken, Error> {
+fn process_vector(tokens: &[ExprToken], i: &mut usize) -> Result<ProcessedExprToken, Error> {
     let bracket_end = find_matching_square_bracket(*i, tokens)?;
     let parentheses_content = &tokens[*i + 1..bracket_end];
     *i = bracket_end;
