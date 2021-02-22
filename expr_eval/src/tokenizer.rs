@@ -84,7 +84,7 @@ pub fn tokenize_expr(expr: &str) -> Result<Vec<ExprToken>, &'static str> {
     EXPR_REGEX
         .find_iter(expr)
         .map(|m| expr[m.start()..m.end()].trim())
-        .filter(|&s| s != "")
+        .filter(|&s| !s.is_empty())
         .map(|capture| match capture {
             "true" => Ok(ExprToken::Bool(true)),
             "false" => Ok(ExprToken::Bool(false)),
