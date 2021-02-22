@@ -56,7 +56,6 @@ fn find_matching_parentheses(i: usize, tokens: &[ExprToken]) -> Result<usize, Er
 
 fn find_matching_square_bracket(i: usize, tokens: &[ExprToken]) -> Result<usize, Error> {
     let mut nested_bracket = -1;
-
     for (index, token) in tokens.iter().enumerate().skip(i + 1) {
         match token {
             ExprToken::CloseSBrackets | ExprToken::VecAccessStart(_) => {
@@ -74,10 +73,7 @@ fn find_matching_square_bracket(i: usize, tokens: &[ExprToken]) -> Result<usize,
 }
 
 fn process_vector<'a>(tokens: &'a [ExprToken], i: &mut usize) -> Result<ProcessedExprToken, Error> {
-    // dbg!(&i);
-    //  dbg!(tokens);
     let bracket_end = find_matching_square_bracket(*i, tokens)?;
-    // dbg!(parentheses_end);
     let parentheses_content = &tokens[*i + 1..bracket_end];
     *i = bracket_end;
     Ok(ProcessedExprToken::Vector(process_expr_tokens(
@@ -97,11 +93,11 @@ fn process_vector_access(
             let mut v = Vec::with_capacity(5);
             //Do while loop
             while {
-                let a = find_matching_square_bracket(*i, tokens);
-                let brackets_content = &tokens[*i + 1..a?];
+                let a = find_matching_square_bracket(*i, tokens)?;
+                let brackets_content = &tokens[*i + 1..a];
                 v.push(process_expr_tokens(brackets_content)?);
-                *i = a?;
-                a.is_ok()
+                *i = a;
+                a < tokens.len() - 1
             } {}
             Ok(ProcessedExprToken::VecAccess(name, v))
         }
@@ -119,7 +115,6 @@ fn process_vector_access(
 
 fn process_parentheses(tokens: &[ExprToken], i: &mut usize) -> Result<ProcessedExprToken, Error> {
     let parentheses_end = find_matching_parentheses(*i, tokens)?;
-    // dbg!(parentheses_end);
     let parentheses_content = &tokens[*i + 1..parentheses_end];
     *i = parentheses_end;
     Ok(ProcessedExprToken::Parentheses(process_expr_tokens(
