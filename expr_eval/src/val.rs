@@ -52,7 +52,7 @@ fn to_vec(s: &str) -> Result<Val, Error> {
         Ok(Val::Vec(
             s.trim_matches(|c| c == '[' || c == ']')
                 .split(',')
-                .map(|v| Ok(v.parse::<Val>()?))
+                .map(|v| v.parse::<Val>())
                 .collect::<Result<Vec<Val>, Error>>()?,
         ))
     } else {
