@@ -146,4 +146,14 @@ mod tests {
             ]))
         );
     }
+
+    #[test]
+    fn empty_vector() {
+        let mut env = Environment::new();
+        let code = "a=[]";
+        let instructions = tokenize(&code);
+        let ast = parse(&instructions).unwrap();
+        runtime::execute(&ast, &mut env).unwrap();
+        assert_eq!(env.get_ref("a"), Ok(&Val::Vec(vec![])));
+    }
 }
