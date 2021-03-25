@@ -36,6 +36,7 @@ fn parse_vector(vector: &[ProcessedExprToken]) -> Result<ParseExprNode, Error> {
     Ok(ParseExprNode::Vector(
         vector
             .split(|x| *x == ProcessedExprToken::Comma)
+            .filter(|&x| !x.is_empty())
             .map(|t| parse_and(t))
             .collect::<Result<Vec<_>, _>>()?,
     ))
